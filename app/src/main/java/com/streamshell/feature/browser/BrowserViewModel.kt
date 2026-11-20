@@ -397,7 +397,10 @@ class BrowserViewModel @Inject constructor(
         // Diagnostics: fullscreen on/off.
         viewModelScope.launch {
             engine.fullscreenView.map { it != null }.distinctUntilChanged().drop(1)
-                .collect { appLog(if (it) "fullscreen on" else "fullscreen off") }
+                .collect {
+                    appLog(if (it) "fullscreen on" else "fullscreen off")
+                    if (it) checkFullscreenRestart()
+                }
         }
         // One page plays at a time: the mini player's video, else the current page (feed previews in other tabs are paused).
         // While the car screen runs, its page plays and the phone's pages are all silent (0.6.5: phone and car fought
@@ -524,6 +527,28 @@ class BrowserViewModel @Inject constructor(
     }
     override fun seekBy(seconds: Int) {
         engine.seekMedia(mediaTabId, seconds)
+    }
+
+    private var seriesSeconds = 0
+    private var seriesJob: kotlinx.coroutines.Job? = null
+
+    /**
+     * One further tap of a double-tap series in fullscreen ([PlayerOpen.SEEK_SERIES_MS]): the series becomes one jump
+     * through YouTube's own player (0.7.2, against the pause-and-pull-back after every single jump).
+     */
+    fun fullscreenSeekTap(forward: Boolean) {
+        val step = settings.value.seekSeconds
+        seriesSeconds += if (forward) step else -step
+        seriesJob?.cancel()
+        seriesJob = viewModelScope.launch {
+            delay(com.streamshell.core.browser.PlayerOpen.SEEK_SERIES_MS)
+            val total = seriesSeconds
+            seriesSeconds = 0
+            if (total != 0) {
+                appLog("double tap: one jump of " + (if (total > 0) "+" else "") + "$total s")
+                engine.seekMedia(mediaTabId, total)
+            }
+        }
     }
 
     /**
@@ -980,7 +1005,8 @@ class BrowserViewModel @Inject constructor(
                         appLog("resume: continue at ${d.at.toInt()} s")
                         message.value = "Continuing at ${com.streamshell.core.watch.WatchRules.formatClock(d.at)}"
                     } else {
-                        appLog("resume: none (${d.reason})")
+                        // On YouTube Music every song is "not a video page" (no resume there by design): not logged (0.7.2).
+                        if (!com.streamshell.core.browser.MusicSite.isMusic(UrlHosts.hostOf(url))) appLog("resume: none (${d.reason})")
                     }
                 }
             }
@@ -1036,6 +1062,30 @@ class BrowserViewModel @Inject constructor(
     private var speedApplied = 100
     private var audioApplied = false
 
+    /** When and in which tab the last video started playing (for [checkFullscreenRestart]). */
+    private var readyAt: Pair<Long, Long> = 0L to -1L
+
+    /**
+     * Fullscreen right after a video opened (0.7.2, log 2026-11-19 11:45:07, 11:45:44, 11:47:15): YouTube emptied its
+     * player and started the video again from 0 while StreamShell's switch to the video was not yet confirmed. If the
+     * position after fullscreen is clearly behind the time the video has been playing, it goes back there.
+     */
+    private fun checkFullscreenRestart() {
+        val (at, tab) = readyAt
+        val since = System.currentTimeMillis() - at
+        if (tab != mediaTabId || since > com.streamshell.core.browser.PlayerOpen.FULLSCREEN_RESTART_WINDOW_MS) return
+        viewModelScope.launch {
+            delay(com.streamshell.core.browser.PlayerOpen.FULLSCREEN_CHECK_DELAY_MS)
+            val expected = (System.currentTimeMillis() - at) / 1000.0
+            engine.run(tab, com.streamshell.core.media.PlayerScripts.POSITION) { r ->
+                val now = com.streamshell.core.media.PlayerScripts.parsePosition(r)?.first ?: return@run
+                val target = com.streamshell.core.browser.PlayerOpen.restartTarget(now, expected) ?: return@run
+                appLog("fullscreen: the player started again at ${now.toInt()} s, back to ${target.toInt()} s")
+                engine.run(tab, com.streamshell.core.media.PlayerScripts.seekTo(target))
+            }
+        }
+    }
+
     /** A new video started in [tab]: channel (speed per channel, watch time), captions; repeat starts off. */
     private fun onNewVideo(tab: Long, st: AppSettings) {
         // YouTube reuses its video element: a repeat set for the previous video would carry over to this one.
@@ -1046,6 +1096,7 @@ class BrowserViewModel @Inject constructor(
         val yt = com.streamshell.core.browser.YouTubeSite.isYouTube(UrlHosts.hostOf(mediaUrl()))
         if (!yt) return
         appLog("player ready: $vid (loading band off)")
+        readyAt = System.currentTimeMillis() to tab
         // Only a recent tap counts; an older one belongs to an open that never played in this tab (0.7.1).
         openedAt.remove(tab)?.let { at ->
             val ms = com.streamshell.core.browser.PlayerOpen.startupMs(at, System.currentTimeMillis())

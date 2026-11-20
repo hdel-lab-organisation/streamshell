@@ -143,6 +143,9 @@ class BrowserEngine(
 
         @Volatile var startedAt = 0L
 
+        /** "page finished" already written for this load (single-page sites call it again and again, 0.7.2). */
+        @Volatile var finishedOnce = false
+
         /** Hosts the user chose to open despite a block; applies to navigation only. */
         val navigationBypass = HashSet<String>()
     }
@@ -303,10 +306,14 @@ class BrowserEngine(
     @Volatile private var extrasConfig = YouTubeExtras.config("", dislikes = false, deArrow = false, markers = false)
     private val extrasHandlers = HashMap<Long, androidx.webkit.ScriptHandler>()
 
+    /** "Trace everything" is on (from the extras switches): YouTube Music's tap trace follows it (0.7.2). */
+    private val traceOn get() = extrasConfig.contains("\"trace\":true")
+
     fun setExtras(config: String) {
         if (config == extrasConfig) return
         extrasConfig = config
         tabs.values.forEach { t ->
+            if (MusicSite.isMusic(UrlHosts.hostOf(t.pageUrl))) t.view.evaluateJavascript(MusicSite.tapScript(traceOn), null)
             applyExtrasScript(t.id, t.view)
             // Applies at once (no reload): the page script reads the new switches.
             if (YouTubeSite.isYouTube(UrlHosts.hostOf(t.pageUrl)) && t.id !in helperPages) t.view.evaluateJavascript(config + YouTubeExtras.INSTALL, null)
@@ -870,7 +877,8 @@ class BrowserEngine(
         // Skip reports from the SponsorBlock timer; only YouTube's own top frame can send them.
         runCatching {
             if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
-                androidx.webkit.WebViewCompat.addWebMessageListener(wv, com.streamshell.core.sponsor.SponsorScripts.CHANNEL, YouTubeSite.origins) { _, message, _, isMainFrame, _ ->
+                // YouTube Music too (0.7.2): its tap trace and ad lines reach the diagnostics.
+                androidx.webkit.WebViewCompat.addWebMessageListener(wv, com.streamshell.core.sponsor.SponsorScripts.CHANNEL, YouTubeSite.origins + MusicSite.origins) { _, message, _, isMainFrame, _ ->
                     // Only YouTube's own top frame; the text is checked and typed by PageMessage.parse (unknown → ignored).
                     if (!isMainFrame) return@addWebMessageListener
                     when (val m = PageMessage.parse(message.data)) {
@@ -964,6 +972,7 @@ class BrowserEngine(
             t?.streamsRefused?.set(0)
             t?.failed?.set(0)
             t?.startedAt = android.os.SystemClock.elapsedRealtime()
+            t?.finishedOnce = false
             page(id) { it.copy(url = url, loading = true, progress = 0, error = null, blocked = 0, panelOpen = false, chapters = emptyList(), storyboard = null, isLive = false, canGoBack = view.canGoBack(), canGoForward = view.canGoForward()) }
             // While a video page loads, let the app draw behind it (black where the player will be, the page colour below)
             // instead of one plain colour; the page's own colour comes back when it has loaded.
@@ -994,7 +1003,8 @@ class BrowserEngine(
         }
 
         override fun onPageFinished(view: WebView, url: String?) {
-            tabs[id]?.let { t ->
+            tabs[id]?.takeIf { !it.finishedOnce }?.let { t ->
+                t.finishedOnce = true
                 traceLine(
                     id,
                     "page finished (" + PageKind.of(url) + ") after " + (android.os.SystemClock.elapsedRealtime() - t.startedAt) + " ms · requests " + t.requests.get() +
@@ -1008,6 +1018,7 @@ class BrowserEngine(
             }
             if (youtubeCompact && YouTubeSite.isYouTube(UrlHosts.hostOf(url))) view.evaluateJavascript(YouTubeSite.INSTALL, null)
             if (youtubeCompact && MusicSite.isMusic(UrlHosts.hostOf(url))) view.evaluateJavascript(MusicSite.INSTALL, null)
+            if (MusicSite.isMusic(UrlHosts.hostOf(url))) view.evaluateJavascript(MusicSite.tapScript(traceOn), null)
             if (YouTubeSite.isYouTube(UrlHosts.hostOf(url))) sponsorScripts[id]?.let { view.evaluateJavascript(it, null) }
             // Helper pages (live chat window) never get the ad skipper or autoplay — also not here at the end of loading.
             if (skipAds && id !in helperPages && adSite(url)) view.evaluateJavascript(YouTubeAds.INSTALL, null)

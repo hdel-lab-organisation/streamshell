@@ -105,8 +105,17 @@ object MediaPolicy {
         else -> LeaveAction.PAUSE
     }
 
-    /** Auto picture-in-picture only while something is actually playing (or a video is fullscreen). */
-    fun shouldAutoPip(autoPipEnabled: Boolean, supported: Boolean, fullscreenVideo: Boolean, media: MediaState, music: Boolean = false): Boolean = autoPipEnabled && supported && !music && (fullscreenVideo || media == MediaState.PLAYING)
+    /**
+     * Auto picture-in-picture only while something is actually playing (or a video is fullscreen). [feed]: the playing
+     * page is YouTube but no video page (muted feed previews, 0.7.2): no picture-in-picture. */
+    fun shouldAutoPip(autoPipEnabled: Boolean, supported: Boolean, fullscreenVideo: Boolean, media: MediaState, music: Boolean = false, feed: Boolean = false): Boolean = autoPipEnabled && supported && !music && (fullscreenVideo || (media == MediaState.PLAYING && !feed))
+
+    /**
+     * The playing page is YouTube without a video (its feed with muted previews). Log 2026-11-19 11:51:32: right after
+     * the mini player's X, picture-in-picture came on for 2 s while only the feed's previews ran.
+     */
+    fun playingFeed(): Boolean = com.streamshell.core.browser.YouTubeSite.isYouTube(com.streamshell.core.browser.UrlHosts.hostOf(MediaBridge.pageUrl)) &&
+        com.streamshell.core.sponsor.SponsorBlockApi.videoIdOf(MediaBridge.pageUrl) == null
 
     /** YouTube Music plays (from the playing page's address): no picture-in-picture, the sound continues in the background. */
     fun playingMusic(): Boolean = com.streamshell.core.browser.MusicSite.isMusic(com.streamshell.core.browser.UrlHosts.hostOf(MediaBridge.pageUrl))

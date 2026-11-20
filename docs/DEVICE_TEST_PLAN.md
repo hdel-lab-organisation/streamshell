@@ -255,4 +255,11 @@ Nothing here has been run on a device yet: the build machine has no emulator (no
 | 252 | Video page at the top, swipe down in the upper half | Mini player, no reload |
 | 253 | YouTube Music player, swipe down | Music's own player bar, song continues, no reload; no PiP when leaving the app |
 | 254 | Media notification on Music / YouTube | Song/video picture; X closes the app (Android 13+) |
+| 255 | Fullscreen YouTube, double tap right, then 2 more taps | One jump +30 s, bubble "30 s »", log "double tap: one jump of +30 s"; check the seeks after it for a pull-back |
+| 256 | Settings: "Double tap to seek" off, fullscreen double tap | YouTube's own double tap |
+| 257 | Open a video, tap fullscreen within 2 s | Video continues at its position (or log "fullscreen: the player started again …, back to …") |
+| 258 | Mini player X while the feed shows previews, leave the app | No picture-in-picture |
+| 259 | YouTube Music player: swipe left/right over the title | Next / previous track, short vibration |
+| 260 | YouTube Music, player collapsed: swipe on Music's bottom player bar | Next / previous track |
+| 261 | YouTube Music: short tap on a song title (trace on) | Opens; log shows "touch … on song link" and, if Music did nothing, "music tap: no reaction, link opened" |
 

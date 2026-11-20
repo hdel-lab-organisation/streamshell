@@ -6,6 +6,37 @@ package com.streamshell.core.browser
  * ready, and never played).
  */
 object PlayerOpen {
+    /**
+     * Double tap in YouTube's fullscreen (0.7.2). Log 2026-11-19: every jump of YouTube's own double tap paused the
+     * picture for about half a second and then pulled it back by 0.2–0.6 s (49 of 99 jumps). StreamShell takes the
+     * double tap over: the first tap still goes to YouTube (its controls), every further quick tap on the same side is
+     * kept from the page and counted; one jump for the whole series, through YouTube's own player, after
+     * [SEEK_SERIES_MS] without a further tap.
+     */
+    const val SEEK_SERIES_MS = 450L
+    const val SERIES_GAP_MS = 400L
+
+    /** Side of a tap at [x] in [width]: left third = back (false), right third = forward (true), middle = none. */
+    fun tapSide(x: Float, width: Float): Boolean? = when {
+        width <= 0f -> null
+        x < width / 3f -> false
+        x > width * 2f / 3f -> true
+        else -> null
+    }
+
+    /** Fullscreen this soon after a video started may restart YouTube's player (see [restartTarget]). */
+    const val FULLSCREEN_RESTART_WINDOW_MS = 6_000L
+    const val FULLSCREEN_CHECK_DELAY_MS = 1_500L
+
+    /**
+     * Where to go back to when fullscreen restarted the video: [position] is clearly (> 1.5 s) behind the time it has
+     * been playing ([expected]); null otherwise.
+     */
+    fun restartTarget(position: Double, expected: Double): Double? = if (expected > 2.0 && position < expected - 1.5) expected else null
+
+    /** Whether a tap continues a series: quick after the last tap ([lastUp] > 0) and on the same side. */
+    fun continuesSeries(lastUp: Long, downAt: Long, lastSide: Boolean?, side: Boolean?): Boolean = side != null && lastSide == side && lastUp > 0 && downAt - lastUp in 0..SERIES_GAP_MS
+
     /** After the mini player's X, the same video caught again within this time is not reopened (0.7.1). */
     const val CLOSED_GRACE_MS = 3000L
 

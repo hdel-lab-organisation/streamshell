@@ -53,6 +53,36 @@ Status words: **untested on device** (implemented, not verified), **engine limit
 - Android may still discard a background WebView under memory pressure; then the instance reloads when you return. The app cannot prevent that.
 - Not yet tested on a device.
 
+## 0.7.2 (2026-11-20) — **untested on a device** — fixes from the logs of 2026-11-06 and 2026-11-19
+
+Source restore: the working copy of 0.6.5–0.7.1 was lost when the work environment was replaced. The source was
+restored from the 0.7.1 release APK (not minified: decompiled and compared class by class with a build of the restored
+source) and from the session record of the 0.7.0/0.7.1 edits; it is on GitHub since 2026-11-20 (commit bc6ba09). The
+release build of the restored source matched the delivered 0.7.1 (manifest and resources identical; code identical
+apart from the order of two compiler-generated members). Tests lost with the working copy (car layout, car theme,
+new-video rules) were written again; docs of 0.6.5–0.6.7 were rewritten in short.
+
+- Fullscreen double tap: StreamShell's own. YouTube's double tap paused the picture for about half a second after
+  every jump and then pulled it back by 0.2–0.6 s (49 of 99 jumps, log 2026-11-19). Now the first tap still goes to
+  YouTube (its controls); every further quick tap on the same side third is kept from the page and counted, and the
+  whole series becomes **one** jump through YouTube's own player 0.45 s after the last tap (bubble "30 s »").
+  The middle third (play / pause) is untouched. Setting "Double tap to seek" off = YouTube's own double tap again.
+  Whether YouTube's player still pulls back after the single jump must be seen on the device (log: "double tap: one
+  jump of +30 s", then the seeks).
+- Fullscreen right after opening a video restarted it (YouTube emptied its player, three times in the log). Within
+  6 s of the start, 1.5 s after fullscreen the position is checked; if it is clearly behind, the video goes back there
+  (log: "fullscreen: the player started again …").
+- No picture-in-picture while only YouTube's feed (muted previews) plays (2 s PiP at 11:51:32).
+- YouTube Music: a sideways swipe for next / previous track now counts over the cover **and the title** (before only
+  the cover; lower swipes did nothing), not over the progress bar; with the player collapsed, over Music's own player
+  bar at the bottom. A short vibration confirms the change.
+- YouTube Music: tap trace like on YouTube ("touch … ms on song link …"). A short, still tap on the title link of a
+  list entry that got **no** reaction from Music (no click, no new address within 0.35 s) opens that link. Whether
+  this is the cause of the "firm press" must be seen in the next log; Music's own taps stay untouched.
+- Diagnostics: "errors" counts real errors only ("failed 0" lines were counted); buffering is no longer counted while
+  the video stands still at its end or is paused; waits after a seek are listed separately ("seek waits");
+  "page finished" once per load (YouTube Music repeated it with growing times); no "resume: none" lines on Music.
+
 ## 0.7.1 (2026-11-06) — **untested on a device** — fixes from the logs of 2026-11-03 and 2026-11-05
 
 - Root cause: every "is this YouTube Music's player page?" check used SponsorBlock's video-id function, which leaves

@@ -278,7 +278,7 @@ class MainActivity : ComponentActivity() {
         b.setActions(listOf(RemoteAction(icon, if (playing) "Pause" else "Play", if (playing) "Pause" else "Play", pi)))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val s = browser.state.value
-            b.setAutoEnterEnabled(MediaPolicy.shouldAutoPip(s.settings.autoPip, pipSupported, fs != null, s.media, MediaPolicy.playingMusic()))
+            b.setAutoEnterEnabled(MediaPolicy.shouldAutoPip(s.settings.autoPip, pipSupported, fs != null, s.media, MediaPolicy.playingMusic(), MediaPolicy.playingFeed()))
             b.setSeamlessResizeEnabled(true)
         }
         return b.build()
@@ -297,7 +297,7 @@ class MainActivity : ComponentActivity() {
         super.onUserLeaveHint()
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             val s = browser.state.value
-            if (MediaPolicy.shouldAutoPip(s.settings.autoPip, pipSupported, browser.engine.fullscreenView.value != null, s.media, MediaPolicy.playingMusic())) enterPip()
+            if (MediaPolicy.shouldAutoPip(s.settings.autoPip, pipSupported, browser.engine.fullscreenView.value != null, s.media, MediaPolicy.playingMusic(), MediaPolicy.playingFeed())) enterPip()
         }
     }
 
@@ -458,6 +458,7 @@ class MainActivity : ComponentActivity() {
             onSeekTo = browser::seekTo,
             onQueryPosition = browser::queryPosition,
             onFullscreenTap = browser::fullscreenTap,
+            onFullscreenSeekTap = browser::fullscreenSeekTap,
             onWideChat = browser::setWideChat,
             onRecommendationsColumn = browser::setRecommendationsColumn,
             onPlayAllLater = browser::playAllWatchLater,

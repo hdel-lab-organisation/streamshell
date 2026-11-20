@@ -193,7 +193,7 @@ document.addEventListener('timeupdate',function(e){var v=e.target;if(v&&v.tagNam
 var pl=null;setInterval(function(){if(!cfg().diag)return;var p=document.querySelector('.html5-video-player');if(!p)return;var ad=p.classList.contains('ad-showing')||p.classList.contains('ad-interrupting');if(pl!==ad){pl=ad;var v=p.querySelector('video');dlog('player '+(ad?'AD':'video')+(v?' '+vstate(v):''));}},250);}
 // ---- Trace everything (Settings › Diagnostics): taps and drags on the page (kind of element, never its text or address),
 // scroll sessions, buffering times, dropped frames and quality every 5 s, page and script errors. Only while switched on.
-var trOn=false,wAt=0,scr=null,lastQ=null,errAt={};
+var trOn=false,wAt=0,wSeek=false,scr=null,lastQ=null,errAt={};
 function tlog(m){if(cfg().trace)dlog(m);}
 function clean(s){return String(s||'?').replace(/https?:\/\/\S+/g,'<address>').slice(0,160);}
 function terr(n,e){if(!cfg().trace)return;var now=Date.now();if(errAt[n]&&now-errAt[n]<10000)return;errAt[n]=now;tlog('script error in '+n+': '+clean(e&&e.message||e));}
@@ -210,8 +210,10 @@ tlog((d<10?(dt>=500?'long press':'touch'):'drag '+Math.round(dx)+','+Math.round(
 window.addEventListener('click',function(e){if(cfg().trace)tlog('click on '+kind(e.target));},true);
 window.addEventListener('scroll',function(){if(!cfg().trace)return;var n=Date.now();if(!scr)scr={y:window.scrollY||0,t:n,h:0};scr.e=n;clearTimeout(scr.h);
 scr.h=setTimeout(function(){if(scr)tlog('scroll '+Math.round((window.scrollY||0)-scr.y)+' px in '+(scr.e-scr.t)+' ms');scr=null;},300);},{passive:true,capture:true});
-document.addEventListener('waiting',function(e){if(e.target&&e.target.tagName==='VIDEO')wAt=Date.now();},true);
-document.addEventListener('playing',function(e){if(e.target&&e.target.tagName==='VIDEO'&&wAt){tlog('buffering '+(Date.now()-wAt)+' ms');wAt=0;}},true);
+document.addEventListener('waiting',function(e){var v=e.target;if(!v||v.tagName!=='VIDEO')return;if(v.ended||(isFinite(v.duration)&&v.duration-v.currentTime<0.5)){wAt=0;return;}wAt=Date.now();wSeek=!!v.seeking;},true);
+document.addEventListener('pause',function(e){if(e.target&&e.target.tagName==='VIDEO'&&!e.target.seeking)wAt=0;},true);
+document.addEventListener('seeking',function(e){if(e.target&&e.target.tagName==='VIDEO'&&wAt)wSeek=true;},true);
+document.addEventListener('playing',function(e){if(e.target&&e.target.tagName==='VIDEO'&&wAt){tlog((wSeek?'seek wait ':'buffering ')+(Date.now()-wAt)+' ms');wAt=0;wSeek=false;}},true);
 document.addEventListener('stalled',function(e){if(e.target&&e.target.tagName==='VIDEO')tlog('stalled (network) '+vstate(e.target));},true);
 document.addEventListener('fullscreenchange',function(){tlog('page fullscreen '+(document.fullscreenElement?'on':'off'));});
 window.addEventListener('error',function(e){if(cfg().trace&&e&&e.message)tlog('page error: '+clean(e.message));},true);

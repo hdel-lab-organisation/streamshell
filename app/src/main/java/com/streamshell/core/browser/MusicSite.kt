@@ -19,6 +19,32 @@ object MusicSite {
 
     fun isMusic(host: String?): Boolean = SiteApp.of(host) == SiteApp.YOUTUBE_MUSIC
 
+    /** Wait for YouTube Music's own reaction to a tap on a title before StreamShell opens the link (ms). */
+    const val TAP_FALLBACK_MS = 350
+
+    /**
+     * Taps on YouTube Music (0.7.2). User: a tap on a song's picture opens at once, a tap on its title only with a firm
+     * press; the log had no trace for Music. This page script
+     * - writes "touch N ms on …" / "click on …" lines to the diagnostics (with "trace everything", like on YouTube);
+     * - when a short, still tap on the title link of a list entry got no reaction from Music at all — no click event and
+     *   no new address within [TAP_FALLBACK_MS] — it opens that link itself. Taps Music handles stay untouched.
+     */
+    fun tapScript(trace: Boolean): String = "(function(){window.__ssMusicTrace=" + trace + ";if(window.__ssMusicTap)return 'ok';window.__ssMusicTap=1;var down=null;" +
+        "function post(m){if(window.__ssMusicTrace&&window.streamShellSponsor)window.streamShellSponsor.postMessage('diag|'+String(m).slice(0,300));}" +
+        "function kind(el){if(!el||!el.closest)return 'page';var a=el.closest('a,button,[role=button],tp-yt-paper-icon-button');var t=a||el;" +
+        "var c='';var p=el;while(p&&p!==document.body&&p.tagName){var n=p.tagName.toLowerCase();if(n.indexOf('-')>0){c=n;break;}p=p.parentElement;}" +
+        "var k=a&&a.tagName==='A'?(/watch/.test(a.getAttribute('href')||'')?'song link':'link'):a?'button':'element';" +
+        "return k+' <'+(t.tagName||'?').toLowerCase()+'>'+(c?' in '+c:'');}" +
+        "document.addEventListener('pointerdown',function(e){down={x:e.clientX,y:e.clientY,t:Date.now(),clicked:false};},true);" +
+        "document.addEventListener('click',function(e){if(down)down.clicked=true;post('click on '+kind(e.target));},true);" +
+        "document.addEventListener('pointerup',function(e){if(!down)return;var d=down;down=null;var dx=e.clientX-d.x,dy=e.clientY-d.y,dt=Date.now()-d.t,dist=Math.sqrt(dx*dx+dy*dy);" +
+        "post((dist<10?(dt>=500?'long press':'touch'):'drag '+Math.round(dx)+','+Math.round(dy))+' '+dt+' ms on '+kind(e.target)+' at '+Math.round(e.clientX)+','+Math.round(e.clientY));" +
+        "if(dist>=10||dt>=500||!e.target||!e.target.closest)return;" +
+        "var a=e.target.closest('a[href]');var item=e.target.closest('ytmusic-responsive-list-item-renderer,ytmusic-two-row-item-renderer');" +
+        "if(!a||!item||!item.contains(a))return;var href=location.href;" +
+        "setTimeout(function(){if(d.clicked||location.href!==href)return;post('music tap: no reaction, link opened');try{a.click();}catch(x){}}," + TAP_FALLBACK_MS + ");},true);" +
+        "return 'ok';})()"
+
     /**
      * Video id of YouTube Music's player page (music.youtube.com/watch?v=ID…), else null. Separate from
      * SponsorBlockApi.videoIdOf, which leaves Music out on purpose (no SponsorBlock, no resume, no Watch later there):

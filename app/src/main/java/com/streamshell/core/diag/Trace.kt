@@ -102,6 +102,7 @@ object DiagnosticsSummary {
     private val pageLoad = Regex("page load \\(([^,]+), ([^)]+)\\)")
     private val startUp = Regex("start-up: (\\d+) ms")
     private val buffering = Regex("buffering (\\d+) ms")
+    private val seekWait = Regex("seek wait (\\d+) ms")
     private val frames = Regex("frames: dropped (\\d+) of (\\d+) in 5 s")
     private val jank = Regex("jank: (\\d+) frames? over 50 ms.*worst (\\d+) ms")
 
@@ -119,12 +120,14 @@ object DiagnosticsSummary {
         val ads = lines.count { it.contains("ads: ad starts") }
         val skips = lines.count { it.contains("Skip button pressed") || it.contains("jump to end of") }
         val guard = lines.count { it.contains("tap guard:") }
-        val errors = lines.count { l -> ERRORS.any { l.contains(it, ignoreCase = true) } }
+        val seeks = lines.mapNotNull { seekWait.find(it)?.groupValues?.get(1)?.toLongOrNull() }
+        val errors = lines.count { l -> ERRORS.containsMatchIn(l) }
         return buildList {
             add("== summary ==")
             add("session: ${clock(span)} · lines ${lines.size}" + (if (dropped > 0) " (oldest $dropped dropped)" else "") + (if (limited > 0) " · $limited lines refused by the rate limit" else ""))
             add("videos opened: $opened · started: ${starts.size}" + if (starts.isNotEmpty()) " · start-up median ${starts[starts.size / 2]} ms, worst ${starts.last()} ms" else "")
             add("buffering: ${waits.size} times, ${waits.sum()} ms in all" + if (waits.isNotEmpty()) ", longest ${waits.max()} ms" else "")
+            if (seeks.isNotEmpty()) add("seek waits: ${seeks.size}, ${seeks.sum()} ms in all, longest ${seeks.max()} ms")
             add("dropped frames: " + if (allF > 0) "$dropF of $allF (${"%.2f".format(dropF * 100.0 / allF)} %)" else "no samples")
             add("screen stutter: " + if (jk.isEmpty()) "none logged" else "${jk.sumOf { it[1].toInt() }} frames over 50 ms, worst ${jk.maxOf { it[2].toInt() }} ms")
             add("page loads: " + if (loads.isEmpty()) "none" else loads.entries.joinToString(", ") { "${it.key} ${it.value}" })
@@ -133,7 +136,11 @@ object DiagnosticsSummary {
         }.joinToString("\n")
     }
 
-    private val ERRORS = listOf("error", "crash", "failed", "process ended")
+    /**
+     * Error lines. "failed N" counts only for N > 0: every "page finished … failed 0" line was counted before (0.7.2,
+     * log 2026-11-06: "errors 20" without a single error).
+     */
+    private val ERRORS = Regex("error|crash|process ended|failed(?! 0\\b)", RegexOption.IGNORE_CASE)
     private const val DAY_MS = 86_400_000L
 
     private fun clock(ms: Long): String {

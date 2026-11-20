@@ -172,6 +172,8 @@ data class BrowserActions(
     val onQueryPosition: ((Double) -> Unit) -> Unit = {},
     /** A short tap in fullscreen at (x, y) px: the app checks whether it hit the chapter title. */
     val onFullscreenTap: (Float, Float) -> Unit = { _, _ -> },
+    /** Fullscreen: a further tap of a double-tap series, forward or back (0.7.2). */
+    val onFullscreenSeekTap: (Boolean) -> Unit = {},
     /** Wide screens, live stream: open / close the live chat window. */
     val onWideChat: (Boolean) -> Unit = {},
     /** The screen is wide enough for the recommendations column next to the player (true) or not (false). */
@@ -597,6 +599,16 @@ private fun Immersive(view: View, state: BrowserUiState, actions: BrowserActions
             swipeHud = null
         }
     }
+    // Double tap (0.7.2): StreamShell's own, one jump per series; the bubble shows the series' total.
+    var seekHud by remember { mutableStateOf<Pair<Boolean, Int>?>(null) }
+    var seekToken by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    androidx.compose.runtime.LaunchedEffect(seekToken) {
+        if (seekHud != null) {
+            kotlinx.coroutines.delay(800)
+            seekHud = null
+        }
+    }
+    val ownDoubleTap = state.settings.doubleTapSeek && state.onYouTube
     val swipe = rememberSwipeControls(state.settings.swipeControls, onExit = actions.onExitFullscreen, onPinch = actions.onVideoZoom) { v, l ->
         swipeHud = v to l
         hudToken++
@@ -618,7 +630,11 @@ private fun Immersive(view: View, state: BrowserUiState, actions: BrowserActions
                     view
                 },
                 onRelease = { v -> (v.parent as? android.view.ViewGroup)?.removeView(v) },
-                modifier = Modifier.fillMaxSize().then(swipe).pointerInput(state.page.chapters.size >= 2) {
+                modifier = Modifier.fillMaxSize().then(swipe).fullscreenDoubleTap(ownDoubleTap) { forward, count ->
+                    seekHud = forward to count * state.settings.seekSeconds
+                    seekToken++
+                    actions.onFullscreenSeekTap(forward)
+                }.pointerInput(state.page.chapters.size >= 2) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
                         touch++
@@ -631,6 +647,15 @@ private fun Immersive(view: View, state: BrowserUiState, actions: BrowserActions
         }
         if (state.page.chapters.size >= 2) ChapterOverlay(state, actions, touch)
         swipeHud?.let { (isVolume, level) -> SwipeHud(isVolume, level) }
+        seekHud?.let { (forward, seconds) ->
+            Text(
+                if (forward) "$seconds s »" else "« $seconds s",
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.align(if (forward) Alignment.CenterEnd else Alignment.CenterStart).padding(horizontal = 48.dp)
+                    .glass(StreamColors.OnMedia, RoundedCornerShape(Radius.pill), strong = true).padding(horizontal = 16.dp, vertical = 10.dp).testTag("seek-hud")
+            )
+        }
         androidx.compose.animation.AnimatedVisibility(
             exitVisible,
             enter = androidx.compose.animation.fadeIn(),
@@ -1341,6 +1366,49 @@ private fun LiveChatCard(pageId: Long, page: PageSurface, pageColor: Int?, modif
     }
 }
 
+/**
+ * Fullscreen double tap, StreamShell's own (0.7.2): the first tap goes to the page as usual (YouTube's controls); a
+ * quick further tap on the same side third is kept from the page (so YouTube does not jump by itself) and reported with
+ * the number of taps in the series so far. The middle third (play / pause) is left alone.
+ */
+private fun Modifier.fullscreenDoubleTap(enabled: Boolean, onSeriesTap: (forward: Boolean, count: Int) -> Unit): Modifier = if (!enabled) {
+    this
+} else {
+    this.pointerInput(Unit) {
+        var lastUp = 0L
+        var lastSide: Boolean? = null
+        var count = 0
+        val slop = 40.dp.toPx()
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+            val side = com.streamshell.core.browser.PlayerOpen.tapSide(down.position.x, size.width.toFloat())
+            val series = com.streamshell.core.browser.PlayerOpen.continuesSeries(lastUp, down.uptimeMillis, lastSide, side)
+            if (series) down.consume()
+            var up: androidx.compose.ui.input.pointer.PointerInputChange? = null
+            while (true) {
+                val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
+                if (series) ch.consume()
+                if (!ch.pressed) {
+                    up = ch
+                    break
+                }
+            }
+            val u = up
+            val quick = u != null && u.uptimeMillis - down.uptimeMillis <= 250 && (u.position - down.position).getDistance() < slop
+            if (u == null || !quick || side == null) {
+                lastUp = 0
+                count = 0
+            } else {
+                count = if (series) count + 1 else 0
+                if (series) onSeriesTap(side, count)
+                lastUp = u.uptimeMillis
+                lastSide = side
+            }
+        }
+    }
+}
+
 /** Two quick taps on the same half of the video (observe only: the page still gets its taps). */
 private fun Modifier.doubleTapSeek(video: com.streamshell.core.media.VideoRect?, onSeek: (forward: Boolean) -> Unit): Modifier = this.pointerInput(video) {
     var lastUp = 0L
@@ -1597,8 +1665,11 @@ private fun androidx.compose.foundation.layout.BoxScope.TabSlot(
     // Double-tap the left/right half of the video: -10 s / +10 s (sites without their own double-tap).
     val doubleTap = isActive && !isMini && !chrome.inPip && state.settings.doubleTapSeek && state.siteApp == null && !state.onYouTube &&
         state.media != com.streamshell.core.media.MediaState.NONE && video != null
-    // YouTube Music: swipe sideways over the player for the next / previous track (like Spotify).
-    val trackSwipe = isActive && !isMini && !chrome.inPip && state.isMusicPlayer
+    // YouTube Music: swipe sideways over the player (cover and title) for the next / previous track, like Spotify; with
+    // the player collapsed, over Music's own player bar at the bottom (0.7.2).
+    val musicBarSwipe = isActive && !isMini && !chrome.inPip && state.onMusic && !state.isMusicPlayer && state.media != com.streamshell.core.media.MediaState.NONE
+    val trackSwipe = (isActive && !isMini && !chrome.inPip && state.isMusicPlayer) || musicBarSwipe
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     var seekFlash by remember { mutableStateOf<Pair<Boolean, Long>?>(null) }
     Box(
         Modifier.fillMaxSize()
@@ -1632,7 +1703,11 @@ private fun androidx.compose.foundation.layout.BoxScope.TabSlot(
                 }
             ).then(
                 if (trackSwipe) {
-                    Modifier.trackSwipe(video, actions.onTrack)
+                    // A short pulse confirms the track change (0.7.2).
+                    Modifier.trackSwipe(video, musicBarSwipe) { next ->
+                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                        actions.onTrack(next)
+                    }
                 } else {
                     Modifier
                 }
@@ -1914,6 +1989,24 @@ internal object PlayerBar {
     }
 
     const val TRACK_SWIPE_DP = 80f
+
+    /** Below the cover: Music's title and artist; the progress bar under them stays for seeking (0.7.2). */
+    const val TRACK_TITLE_AREA_DP = 96f
+
+    /** Height of YouTube Music's own player bar at the bottom of the page (collapsed player). */
+    const val MUSIC_BAR_DP = 64f
+
+    /**
+     * Where a sideways swipe changes the track (pure, 0.7.2; before only the cover counted — log 2026-11-06: swipes lower
+     * than about 330 dp did nothing). On the player page: from the top through the cover and the title, not the progress
+     * bar ([coverBottomPx] < 0 = cover unknown: the upper [fallbackPx]). With the player collapsed ([bar]): Music's own
+     * player bar at the bottom of the page.
+     */
+    fun inTrackSwipeArea(yPx: Float, heightPx: Float, coverBottomPx: Float, fallbackPx: Float, density: Float, bar: Boolean): Boolean = when {
+        bar -> yPx >= heightPx - MUSIC_BAR_DP * density
+        coverBottomPx > 0f -> yPx <= coverBottomPx + TRACK_TITLE_AREA_DP * density
+        else -> yPx <= fallbackPx + TRACK_TITLE_AREA_DP * density
+    }
 
     /** The first player action (a thin line before it separates it from the sections). */
     const val FIRST_ACTION = LATER
@@ -2236,16 +2329,12 @@ private const val LOADING_BAND_MAX_MS = 3000L
  * Observes a sideways swipe that starts over the music player (its video/picture, else the top square of the page) and
  * asks for the next (swipe left) or previous (swipe right) track. Nothing is consumed: the page still gets the touch.
  */
-private fun Modifier.trackSwipe(video: com.streamshell.core.media.VideoRect?, onTrack: (Boolean) -> Unit): Modifier = pointerInput(video) {
+private fun Modifier.trackSwipe(video: com.streamshell.core.media.VideoRect?, bar: Boolean, onTrack: (Boolean) -> Unit): Modifier = pointerInput(video, bar) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
         val p = down.position
-        val inPlayer = if (video != null && video.width > 0f) {
-            p.x >= video.left && p.x <= video.left + video.width && p.y >= video.top && p.y <= video.top + video.height
-        } else {
-            p.y <= size.width
-        }
-        if (!inPlayer) return@awaitEachGesture
+        val coverBottom = if (video != null && video.width > 0f) video.top + video.height else -1f
+        if (!PlayerBar.inTrackSwipeArea(p.y, size.height.toFloat(), coverBottom, size.width.toFloat(), density, bar)) return@awaitEachGesture
         var last = p
         while (true) {
             val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)

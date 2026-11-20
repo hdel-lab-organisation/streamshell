@@ -38,6 +38,7 @@
     <ID>CyclomaticComplexMethod:BrowserScreen.kt$@Composable private fun playerBarItem(k: String, state: BrowserUiState): Triple&lt;androidx.compose.ui.graphics.vector.ImageVector, String, Boolean&gt;</ID>
     <ID>CyclomaticComplexMethod:BrowserScreen.kt$@Composable private fun rememberSwipeControls(enabled: Boolean, onExit: () -&gt; Unit, onPinch: (Boolean) -&gt; Unit, onHud: (isVolume: Boolean, level: Float) -&gt; Unit): Modifier</ID>
     <ID>CyclomaticComplexMethod:BrowserScreen.kt$@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class) @Composable private fun SiteMenuSheet( app: com.streamshell.core.browser.SiteApp, state: BrowserUiState, actions: BrowserActions, chrome: BrowserChrome, onDismiss: () -&gt; Unit, onShowBrowserBars: () -&gt; Unit )</ID>
+    <ID>CyclomaticComplexMethod:BrowserScreen.kt$private fun Modifier.fullscreenDoubleTap(enabled: Boolean, onSeriesTap: (forward: Boolean, count: Int) -&gt; Unit): Modifier</ID>
     <ID>CyclomaticComplexMethod:BrowserScreen.kt$private fun Modifier.pageGestures( video: com.streamshell.core.media.VideoRect?, music: Boolean, videoPage: Boolean, minimize: Boolean, refresh: Boolean, atTop: () -&gt; Boolean, onMinimize: () -&gt; Unit, onPull: (Float) -&gt; Unit, onRefresh: () -&gt; Unit ): Modifier</ID>
     <ID>CyclomaticComplexMethod:BrowserScreen.kt$private fun siteIcon(key: String, on: Boolean)</ID>
     <ID>CyclomaticComplexMethod:BrowserViewModel.kt$BrowserViewModel$fun syncSubscriptionsSoon(force: Boolean = false)</ID>
@@ -58,6 +59,7 @@
     <ID>CyclomaticComplexMethod:SponsorBlock.kt$SponsorBlockApi$fun parse(body: String, videoId: String, categories: Set&lt;String&gt;): List&lt;SkipSegment&gt;</ID>
     <ID>CyclomaticComplexMethod:Storyboard.kt$Storyboard$fun frame(spec: String, durationSec: Double, atSec: Int, maxWidth: Int = 160): StoryboardFrame?</ID>
     <ID>CyclomaticComplexMethod:SubscriptionSyncManager.kt$SyncRules$fun apply(watch: List&lt;Channel&gt;, rows: Map&lt;String, ChannelEntity&gt;, found: List&lt;Channel&gt;, completeSync: Boolean, now: Long): SyncOutcome</ID>
+    <ID>CyclomaticComplexMethod:Trace.kt$DiagnosticsSummary$fun of(lines: List&lt;String&gt;, dropped: Long = 0, limited: Long = 0): String</ID>
     <ID>CyclomaticComplexMethod:UrlHosts.kt$PageKind$fun of(url: String?): String</ID>
     <ID>CyclomaticComplexMethod:Watch.kt$WatchSerializer$fun decode(raw: (String) -&gt; String?): WatchData</ID>
     <ID>CyclomaticComplexMethod:Watch.kt$WatchSerializer$fun encode(d: WatchData): Map&lt;String, String&gt;</ID>
@@ -72,9 +74,11 @@
     <ID>LongMethod:SettingsRepository.kt$DataStoreSettingsRepository$private fun Preferences.toSettings(): AppSettings</ID>
     <ID>LongParameterList:BrowserScreen.kt$( video: com.streamshell.core.media.VideoRect?, music: Boolean, videoPage: Boolean, minimize: Boolean, refresh: Boolean, atTop: () -&gt; Boolean, onMinimize: () -&gt; Unit, onPull: (Float) -&gt; Unit, onRefresh: () -&gt; Unit )</ID>
     <ID>LongParameterList:BrowserScreen.kt$(w: Int, h: Int, video: com.streamshell.core.media.VideoRect?, x: Float, y: Float, mw: Float, mh: Float)</ID>
+    <ID>LongParameterList:BrowserScreen.kt$PlayerBar$(yPx: Float, heightPx: Float, coverBottomPx: Float, fallbackPx: Float, density: Float, bar: Boolean)</ID>
     <ID>LongParameterList:BrowserViewModel.kt$BrowserViewModel$( private val app: Application, private val settingsRepo: SettingsRepository, private val library: LibraryRepository, private val privacy: PrivacyCoordinator, private val external: ExternalNavigator, network: NetworkMonitor, @LibraryStore private val store: DataStore&lt;Preferences&gt; )</ID>
     <ID>LongParameterList:CarBrowser.kt$CarBrowser$(target: View, down: Long, time: Long, action: Int, x: Float, y: Float)</ID>
     <ID>LongParameterList:CarDisplay.kt$CarDisplay$(width: Int, height: Int, visLeft: Int, visTop: Int, visRight: Int, visBottom: Int)</ID>
+    <ID>LongParameterList:MediaPolicy.kt$MediaPolicy$(autoPipEnabled: Boolean, supported: Boolean, fullscreenVideo: Boolean, media: MediaState, music: Boolean = false, feed: Boolean = false)</ID>
     <ID>LongParameterList:Watch.kt$WatchRules$(list: List&lt;WatchPosition&gt;, url: String, title: String, position: Double, duration: Double, now: Long)</ID>
     <ID>LongParameterList:YouTubeExtras.kt$YouTubeExtras$( feedCss: String, dislikes: Boolean, deArrow: Boolean, markers: Boolean, diag: Boolean = false, trace: Boolean = false, watched: Collection&lt;String&gt; = emptyList(), channels: Collection&lt;String&gt; = emptyList(), words: Collection&lt;String&gt; = emptyList() )</ID>
     <ID>LoopWithTooManyJumpStatements:BrowserScreen.kt$while</ID>
@@ -129,6 +133,7 @@
     <ID>MagicNumber:BrowserViewModel.kt$BrowserViewModel$100</ID>
     <ID>MagicNumber:BrowserViewModel.kt$BrowserViewModel$100.0</ID>
     <ID>MagicNumber:BrowserViewModel.kt$BrowserViewModel$1000</ID>
+    <ID>MagicNumber:BrowserViewModel.kt$BrowserViewModel$1000.0</ID>
     <ID>MagicNumber:BrowserViewModel.kt$BrowserViewModel$10_000</ID>
     <ID>MagicNumber:BrowserViewModel.kt$BrowserViewModel$1500</ID>
     <ID>MagicNumber:BrowserViewModel.kt$BrowserViewModel$300</ID>
@@ -218,7 +223,9 @@
     <ID>MagicNumber:PlaybackService.kt$Thumbnails$200</ID>
     <ID>MagicNumber:PlaybackService.kt$Thumbnails$8000</ID>
     <ID>MagicNumber:PlaybackService.kt$Thumbnails$9</ID>
+    <ID>MagicNumber:PlayerOpen.kt$PlayerOpen$1.5</ID>
     <ID>MagicNumber:PlayerOpen.kt$PlayerOpen$3</ID>
+    <ID>MagicNumber:PlayerOpen.kt$PlayerOpen$3f</ID>
     <ID>MagicNumber:PlayerScripts.kt$PlayerScripts$0.5</ID>
     <ID>MagicNumber:PlayerScripts.kt$PlayerScripts$100</ID>
     <ID>MagicNumber:PlayerScripts.kt$PlayerScripts$100.0</ID>
@@ -378,6 +385,7 @@
     <ID>MaxLineLength:BrowserScreen.kt$val activity = remember(ctx) { generateSequence(ctx) { (it as? android.content.ContextWrapper)?.baseContext }.firstOrNull { it is android.app.Activity } as? android.app.Activity }</ID>
     <ID>MaxLineLength:BrowserScreen.kt$val anim by androidx.compose.animation.core.animateFloatAsState(if (refreshing) 1f else pull.coerceAtMost(1.2f), androidx.compose.animation.core.spring(stiffness = 900f), label = "pull")</ID>
     <ID>MaxLineLength:BrowserScreen.kt$val bandAlpha by androidx.compose.animation.core.animateFloatAsState(if (loadingBand) 1f else 0f, androidx.compose.animation.core.tween(180), label = "band")</ID>
+    <ID>MaxLineLength:BrowserScreen.kt$val musicBarSwipe = isActive &amp;&amp; !isMini &amp;&amp; !chrome.inPip &amp;&amp; state.onMusic &amp;&amp; !state.isMusicPlayer &amp;&amp; state.media != com.streamshell.core.media.MediaState.NONE</ID>
     <ID>MaxLineLength:BrowserScreen.kt$val playerBar = state.settings.playerActionRow &amp;&amp; ((state.onYouTube &amp;&amp; state.isVideoPage) || state.isMusicPlayer) &amp;&amp; state.miniTabId != state.active.id</ID>
     <ID>MaxLineLength:BrowserScreen.kt$val sheet = ThumbCache.get(frame.url) ?: com.streamshell.core.media.Thumbnails.fetch(frame.url, crop16x9 = false)?.also { ThumbCache.put(frame.url, it) }</ID>
     <ID>MaxLineLength:BrowserScreen.kt${ IconButton(onClick = { value = TextFieldValue("") }, modifier = Modifier.testTag("address-clear")) { Icon(StreamIcons.Close, "Clear", Modifier.size(20.dp)) } }</ID>
@@ -444,7 +452,8 @@
     <ID>MaxLineLength:LibraryPanels.kt$text = { OutlinedTextField(value = to, onValueChange = { to = it.take(Playlists.MAX_NAME) }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("playlist-rename-field")) }</ID>
     <ID>MaxLineLength:MainActivity.kt$MainActivity$Modifier.fillMaxSize().traceTouches(trace, { (view as? androidx.compose.ui.node.RootForTest)?.semanticsOwner }, density) { line -&gt; browser.trace("ui", line) }</ID>
     <ID>MaxLineLength:MainActivity.kt$MainActivity$androidx.compose.runtime.LaunchedEffect(pageDark) { browser.engine.setPageBackground(if (pageDark) 0xFF0F0F0F.toInt() else android.graphics.Color.WHITE) }</ID>
-    <ID>MaxLineLength:MainActivity.kt$MainActivity$if (MediaPolicy.shouldAutoPip(s.settings.autoPip, pipSupported, browser.engine.fullscreenView.value != null, s.media, MediaPolicy.playingMusic())) enterPip()</ID>
+    <ID>MaxLineLength:MainActivity.kt$MainActivity$b.setAutoEnterEnabled(MediaPolicy.shouldAutoPip(s.settings.autoPip, pipSupported, fs != null, s.media, MediaPolicy.playingMusic(), MediaPolicy.playingFeed()))</ID>
+    <ID>MaxLineLength:MainActivity.kt$MainActivity$if (MediaPolicy.shouldAutoPip(s.settings.autoPip, pipSupported, browser.engine.fullscreenView.value != null, s.media, MediaPolicy.playingMusic(), MediaPolicy.playingFeed())) enterPip()</ID>
     <ID>MaxLineLength:MainActivity.kt$MainActivity$onImportSubscriptions = { runCatching { importSubscriptions.launch(arrayOf("text/csv", "text/comma-separated-values", "text/plain", "application/json", "application/octet-stream")) } }</ID>
     <ID>MaxLineLength:MainActivity.kt$MainActivity$val back = BackPolicy.resolve(fullscreen != null, s.nav, pageCanGoBack = !s.showingStart &amp;&amp; s.page.canGoBack, canReturnToStart = !s.showingStart &amp;&amp; s.active.openedFromStart)</ID>
     <ID>MaxLineLength:MainActivity.kt$MainActivity$val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_SUBJECT, "StreamShell diagnostics").putExtra(Intent.EXTRA_TEXT, text)</ID>
@@ -457,6 +466,10 @@
     <ID>MaxLineLength:Models.kt$VideoQuality$val OPTIONS = listOf("auto" to "Auto", "hd2160" to "2160p", "hd1440" to "1440p", "hd1080" to "1080p", "hd720" to "720p", "large" to "480p", "medium" to "360p", "small" to "240p")</ID>
     <ID>MaxLineLength:MusicSite.kt$MediaSessionScripts$const</ID>
     <ID>MaxLineLength:MusicSite.kt$MediaSessionScripts$val buttons = if (a == NEXT) ".next-button,.ytp-next-button,button.player-control-next" else ".previous-button,.ytp-prev-button,button.player-control-previous"</ID>
+    <ID>MaxLineLength:MusicSite.kt$MusicSite$"document.addEventListener('pointerup',function(e){if(!down)return;var d=down;down=null;var dx=e.clientX-d.x,dy=e.clientY-d.y,dt=Date.now()-d.t,dist=Math.sqrt(dx*dx+dy*dy);"</ID>
+    <ID>MaxLineLength:MusicSite.kt$MusicSite$"post((dist&lt;10?(dt&gt;=500?'long press':'touch'):'drag '+Math.round(dx)+','+Math.round(dy))+' '+dt+' ms on '+kind(e.target)+' at '+Math.round(e.clientX)+','+Math.round(e.clientY));"</ID>
+    <ID>MaxLineLength:MusicSite.kt$MusicSite$"setTimeout(function(){if(d.clicked||location.href!==href)return;post('music tap: no reaction, link opened');try{a.click();}catch(x){}},"</ID>
+    <ID>MaxLineLength:MusicSite.kt$MusicSite$fun</ID>
     <ID>MaxLineLength:NotificationEngine.kt$NotificationDispatcher$.</ID>
     <ID>MaxLineLength:NotificationEngine.kt$NotificationDispatcher$Intent(Intent.ACTION_VIEW, url.toUri()).setClass(context, com.streamshell.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)</ID>
     <ID>MaxLineLength:NotificationEngine.kt$NotificationEngine$val delivery = if (out.isEmpty()) Delivery(emptyList()) else runCatching { deliver(out) }.getOrElse { Delivery(emptyList(), "error: ${it.javaClass.simpleName}") }</ID>
@@ -489,6 +502,7 @@
     <ID>MaxLineLength:Panels.kt$trailingContent = { IconButton(onClick = { actions.onRemoveHistory(h.url) }, modifier = Modifier.testTag("history-remove")) { Icon(StreamIcons.Close, "Remove from history") } }</ID>
     <ID>MaxLineLength:PlaybackService.kt$PlaybackService$PlaybackState.ACTION_REWIND</ID>
     <ID>MaxLineLength:PlaybackService.kt$PlaybackService$val pi = PendingIntent.getService(this, act.hashCode(), Intent(this, PlaybackService::class.java).setAction(act), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)</ID>
+    <ID>MaxLineLength:PlayerOpen.kt$PlayerOpen$fun</ID>
     <ID>MaxLineLength:PlayerOpen.kt$PlayerOpen$fun justClosed(videoId: String, closedId: String?, closedAt: Long, now: Long): Boolean</ID>
     <ID>MaxLineLength:PlayerScripts.kt$PlayerScripts$"document.addEventListener('ratechange',function(e){var v=e.target;if(window.__ssSetting||!v||v.tagName!=='VIDEO'||ad()||Date.now()-tapAt&gt;4000)return;var r=v.playbackRate;if(r&gt;0&amp;&amp;r&lt;=2)window.__ssRate=r;},true);}"</ID>
     <ID>MaxLineLength:PlayerScripts.kt$PlayerScripts$"function apply(v){if(!ad()&amp;&amp;v&amp;&amp;v.playbackRate!==window.__ssRate&amp;&amp;v.playbackRate&lt;=2){window.__ssSetting=true;v.playbackRate=window.__ssRate;window.__ssSetting=false;}}"</ID>
