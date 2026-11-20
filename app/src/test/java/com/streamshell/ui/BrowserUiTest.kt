@@ -46,6 +46,7 @@ import com.streamshell.feature.browser.BrowserScreen
 import com.streamshell.feature.browser.BrowserUiState
 import com.streamshell.feature.browser.QuickSites
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -610,11 +611,20 @@ class BrowserUiTest {
         }
     }
 
-    @Test fun pullDownAtTheTopRefreshesBelowTheVideo() {
+    // 0.7.1 (log 2026-11-05 07:22:10): a video page is never reloaded by a swipe down (before: pull to refresh below
+    // the video). The upper half of a video page at its top minimizes; lower down nothing happens.
+    @Test fun pullDownOnAVideoPageNeverReloads() {
         val st = ytState("https://m.youtube.com/watch?v=dQw4w9WgXcQ").copy(media = com.streamshell.core.media.MediaState.PLAYING)
         rule.setContent { PullHost(st, atTop = true) }
         rule.onNodeWithTag("page").performTouchInput { this.swipe(androidx.compose.ui.geometry.Offset(centerX, 700f), androidx.compose.ui.geometry.Offset(centerX, 1500f), 300) }
-        assertEquals(listOf("reload"), log)
+        assertFalse(log.contains("reload"))
+    }
+
+    @Test fun pullDownOnShortsDoesNothing() {
+        val st = ytState("https://m.youtube.com/shorts/dQw4w9WgXcQ").copy(media = com.streamshell.core.media.MediaState.PLAYING)
+        rule.setContent { PullHost(st, atTop = true) }
+        rule.onNodeWithTag("page").performTouchInput { this.swipe(androidx.compose.ui.geometry.Offset(centerX, 300f), androidx.compose.ui.geometry.Offset(centerX, 1300f), 300) }
+        assertEquals(emptyList<String>(), log) // YouTube's "previous Short": no reload, no mini player
     }
 
     @Test fun pullOnTheVideoStillMinimizesAndShortOrScrolledPullsDoNothing() {

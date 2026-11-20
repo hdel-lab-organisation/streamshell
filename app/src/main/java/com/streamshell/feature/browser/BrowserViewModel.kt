@@ -146,8 +146,15 @@ data class BrowserUiState(
     /** The current page is a video (YouTube watch / shorts / live link): Watch later applies. */
     val isVideoPage get() = com.streamshell.core.sponsor.SponsorBlockApi.videoIdOf(currentUrl) != null
 
+    /** YouTube Music's player page is open (its own checks; [isVideoPage] is false on Music by design). */
+    val isMusicPlayer get() = com.streamshell.core.browser.MusicSite.playerVideoId(currentUrl) != null
+
     /** A YouTube video page can be minimized into the mini player. */
-    val canMinimize get() = miniTabId == null && com.streamshell.core.sponsor.SponsorBlockApi.videoIdOf(currentUrl) != null
+    // Not on Shorts (0.7.1): a swipe down there is YouTube's "previous Short", and a Short is no mini-player video.
+    val canMinimize get() = miniTabId == null && !isShortsPage && com.streamshell.core.sponsor.SponsorBlockApi.videoIdOf(currentUrl) != null
+
+    /** A YouTube Shorts page (/shorts/…). */
+    val isShortsPage get() = com.streamshell.core.browser.PageKind.of(currentUrl) == "shorts"
     val active get() = tabs.active
     val showingStart get() = active.showingStart || active.url == null
     val currentUrl: String? get() = if (showingStart) null else (page.url ?: active.url)
@@ -393,11 +400,19 @@ class BrowserViewModel @Inject constructor(
                 .collect { appLog(if (it) "fullscreen on" else "fullscreen off") }
         }
         // One page plays at a time: the mini player's video, else the current page (feed previews in other tabs are paused).
+        // While the car screen runs, its page plays and the phone's pages are all silent (0.6.5: phone and car fought
+        // over the sound — pause / play flicker in the car).
         viewModelScope.launch {
-            combine(tabs, miniTab) { t, m -> com.streamshell.core.browser.TabsState.mediaTab(t, m) }
-                .distinctUntilChanged().collect {
-                    appLog("playing tab: $it (others silenced)")
-                    engine.setMediaTab(it)
+            combine(tabs, miniTab, com.streamshell.core.media.CarPresence.active) { t, m, car -> com.streamshell.core.browser.TabsState.mediaTab(t, m) to car }
+                .distinctUntilChanged().collect { (tab, car) ->
+                    if (car) {
+                        appLog("car screen open: phone pages silent")
+                        engine.setMediaTab(com.streamshell.core.media.CarPresence.NO_TAB)
+                        engine.pauseAllMedia()
+                    } else {
+                        appLog("playing tab: $tab (others silenced)")
+                        engine.setMediaTab(tab)
+                    }
                 }
         }
         // Media watch: what the page plays decides the notification, background visibility and auto-PiP.
@@ -453,6 +468,7 @@ class BrowserViewModel @Inject constructor(
         }
         engine.resumeViews()
         probe()
+        syncSubscriptionsSoon()
     }
 
     fun onBackground(isInPip: Boolean) {
@@ -714,6 +730,11 @@ class BrowserViewModel @Inject constructor(
 
     fun minimize() {
         val s = state.value
+        // YouTube Music never goes into StreamShell's mini player: its own player collapses into its own bar.
+        if (s.onMusic) {
+            minimizeMusic()
+            return
+        }
         if (!s.canMinimize) return
         val videoTab = activeId
         // Player tab of an instance: shrink the video and show the instance exactly as it was (nothing reloads).
@@ -728,6 +749,12 @@ class BrowserViewModel @Inject constructor(
         // An ordinary YouTube tab: hand the video to the site's instance (reused, never a new tab per minimize).
         val app = s.siteApp ?: com.streamshell.core.browser.SiteApp.YOUTUBE
         val inst = TabsReducer.instanceTab(tabs.value, app.name)
+        // The instance itself plays the video (opened inside the feed): hand it to the instance's player tab and take
+        // the feed back one step — never a new tab (0.7.1; before, a new instance was made and the feed loaded again).
+        if (inst != null && inst.id == videoTab) {
+            handOverToPlayer(videoTab, s.currentUrl ?: return)
+            return
+        }
         if (inst != null && inst.id != videoTab) {
             val oldPlayer = TabsReducer.playerTabOf(tabs.value, inst.id)?.id?.takeIf { it != videoTab }
             tabs.update { st -> TabsReducer.update(st, videoTab) { it.copy(playerFor = inst.id) } }
@@ -757,6 +784,32 @@ class BrowserViewModel @Inject constructor(
         }
     }
 
+    /** [minimize] when the instance [inst] plays [url] itself: the player tab takes over at the same position, then shrinks. */
+    private fun handOverToPlayer(inst: Long, url: String) {
+        engine.run(inst, com.streamshell.core.media.PlayerScripts.POSITION) { r ->
+            val pos = com.streamshell.core.media.PlayerScripts.parsePosition(r)?.first?.toInt() ?: 0
+            val id = com.streamshell.core.sponsor.SponsorBlockApi.videoIdOf(url) ?: return@run
+            appLog("minimize: video handed from the instance (tab $inst) to its player at ${pos}s")
+            onOpenVideo(inst, "https://m.youtube.com/watch?v=$id" + if (pos > 0) "&t=${pos}s" else "")
+            engine.goBack(inst)
+            val pid = TabsReducer.playerTabOf(tabs.value, inst)?.id ?: return@run
+            miniTab.value = pid
+            tabs.update { TabsReducer.select(it, inst) }
+            nav.value = NavState()
+        }
+    }
+
+    /**
+     * YouTube Music: closes its player page the way its own Back does (one step back in the page's history); the song
+     * keeps playing in Music's player bar at the bottom. Nothing reloads.
+     */
+    fun minimizeMusic() {
+        val s = state.value
+        if (!s.isMusicPlayer) return
+        appLog("music: player collapsed (Music's own player bar)")
+        engine.goBack(activeId)
+    }
+
     /** Back to the full video page. */
     fun restoreMini() {
         val id = miniTab.value ?: return
@@ -772,8 +825,14 @@ class BrowserViewModel @Inject constructor(
         val id = miniTab.value ?: return
         appLog("mini player closed (X)")
         engine.pauseMedia(id)
+        // Pending in-page switches must not bring the closed video back (log 2026-11-05 07:10:27, 07:22:17).
+        engine.cancelPendingOpens()
+        closedVideo = com.streamshell.core.sponsor.SponsorBlockApi.videoIdOf(engine.pages.value[id]?.url) to System.currentTimeMillis()
         miniTab.value = null
     }
+
+    /** Video closed with the mini player's X and when: the same video caught again right after is not reopened. */
+    private var closedVideo: Pair<String?, Long> = null to 0L
 
     fun selectTab(id: Long) {
         if (id == miniTab.value) {
@@ -987,7 +1046,11 @@ class BrowserViewModel @Inject constructor(
         val yt = com.streamshell.core.browser.YouTubeSite.isYouTube(UrlHosts.hostOf(mediaUrl()))
         if (!yt) return
         appLog("player ready: $vid (loading band off)")
-        openedAt.remove(tab)?.let { at -> appLog("start-up: ${System.currentTimeMillis() - at} ms (tap to playing)") }
+        // Only a recent tap counts; an older one belongs to an open that never played in this tab (0.7.1).
+        openedAt.remove(tab)?.let { at ->
+            val ms = com.streamshell.core.browser.PlayerOpen.startupMs(at, System.currentTimeMillis())
+            appLog(if (ms != null) "start-up: $ms ms (tap to playing)" else "start-up: unknown (no recent tap)")
+        }
         if (st.captions != "default") {
             engine.run(tab, com.streamshell.core.media.PlayerScripts.captions(st.captions, st.captionsLanguage))
             appLog("captions ${st.captions}${st.captionsLanguage.takeIf { it.isNotEmpty() }?.let { " ($it)" }.orEmpty()}")
@@ -1341,6 +1404,93 @@ class BrowserViewModel @Inject constructor(
         viewModelScope.launch { watchRepo.update { w -> w.copy(channels = w.channels.filterNot { it.id == id }) } }
     }
 
+    /** Bell of a channel (Subscriptions): new-video notifications on / off (0.6.7). */
+    fun toggleChannelBell(id: String) {
+        viewModelScope.launch { watchRepo.update { w -> w.copy(muted = if (id in w.muted) w.muted - id else w.muted + id) } }
+    }
+
+    private var syncing = false
+    private val notifyDao by lazy { com.streamshell.core.notify.NotifyDatabase.get(app).dao() }
+    private val syncManager by lazy { com.streamshell.core.notify.SubscriptionSyncManager(notifyDao, watchRepo) }
+
+    /**
+     * Reads the user's subscriptions from YouTube's own "All subscriptions" page, opened in the background in the
+     * signed-in browser (an extra page that is never shown and is closed afterwards): scrolled to its end so that long
+     * lists load completely, then the channel list is read. Twice a day automatically (after an hour when the last try
+     * failed), or now ([force], "Sync now"). No cookies or tokens are read. A sync is COMPLETE only when the page had
+     * nothing more to load; otherwise it is recorded as partial and never used to remove channels.
+     */
+    fun syncSubscriptionsSoon(force: Boolean = false) {
+        val s = settings.value
+        if (!s.notifyEnabled || syncing) return
+        syncing = true
+        viewModelScope.launch {
+            val sync = com.streamshell.core.watch.SubscriptionSync
+            if (!force && !com.streamshell.core.notify.SyncRules.due(runCatching { notifyDao.lastSyncNow() }.getOrNull(), System.currentTimeMillis())) {
+                syncing = false
+                return@launch
+            }
+            com.streamshell.core.notify.SubscriptionSyncManager.setRunning(true)
+            try {
+                engine.load(SYNC_TAB, sync.PAGE)
+                val loaded = kotlinx.coroutines.withTimeoutOrNull(SYNC_TIMEOUT_MS) {
+                    engine.pages.first { p -> p[SYNC_TAB]?.let { !it.loading && it.url != null } == true }
+                }
+                if (loaded == null) {
+                    syncManager.record(emptyList(), complete = false, error = "YouTube's page did not load")
+                    appLog("subscriptions: YouTube's page did not load")
+                    return@launch
+                }
+                kotlinx.coroutines.delay(SYNC_SETTLE_MS)
+                var last: com.streamshell.core.watch.SubscriptionSync.Progress? = null
+                var stable = 0
+                var rounds = 0
+                var readable = true
+                while (readable && rounds < sync.MAX_SCROLLS && !sync.complete(last, stable)) {
+                    val p = sync.parseProgress(runScript(SYNC_TAB, sync.SCROLL))
+                    readable = p != null
+                    if (p != null) {
+                        stable = if (last != null && p.count == last.count) stable + 1 else 0
+                        last = p
+                        rounds++
+                        if (!sync.complete(p, stable)) kotlinx.coroutines.delay(SYNC_SCROLL_MS)
+                    }
+                }
+                val complete = sync.complete(last, stable)
+                val found = sync.parse(runScript(SYNC_TAB, sync.SCRIPT))
+                val run = syncManager.record(found, complete, error = null)
+                appLog(
+                    "subscriptions: ${found.size} channels on YouTube's page, ${run.added} new, ${run.removed} removed, " +
+                        (if (run.complete) "complete" else "partial") + if (found.isEmpty()) " (signed out?)" else ""
+                )
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                runCatching { syncManager.record(emptyList(), complete = false, error = e.javaClass.simpleName) }
+            } finally {
+                engine.close(SYNC_TAB)
+                syncing = false
+                com.streamshell.core.notify.SubscriptionSyncManager.setRunning(false)
+            }
+        }
+    }
+
+    private suspend fun runScript(tab: Long, script: String): String? = kotlinx.coroutines.withTimeoutOrNull(SYNC_SCRIPT_TIMEOUT_MS) {
+        kotlinx.coroutines.suspendCancellableCoroutine { c ->
+            engine.run(tab, script) { r -> if (c.isActive) c.resumeWith(Result.success(r)) }
+        }
+    }
+
+    /** "Sync now" in the notification settings: subscriptions now, then one check of the feeds. */
+    fun syncNotificationsNow() {
+        syncSubscriptionsSoon(force = true)
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(SYNC_SETTLE_MS)
+            com.streamshell.core.notify.SubscriptionSyncManager.running.first { !it }
+            com.streamshell.core.notify.NotificationScheduler.runNow(app)
+        }
+    }
+
     fun openChannel(c: com.streamshell.core.watch.Channel) {
         nav.value = NavState()
         openSiteApp(com.streamshell.core.browser.SiteApp.YOUTUBE)
@@ -1520,6 +1670,11 @@ class BrowserViewModel @Inject constructor(
         }
         val s = tabs.value
         if (s.tabs.none { it.id == tabId }) return
+        val vid = com.streamshell.core.sponsor.SponsorBlockApi.videoIdOf(url)
+        if (vid != null && com.streamshell.core.browser.PlayerOpen.justClosed(vid, closedVideo.first, closedVideo.second, System.currentTimeMillis())) {
+            appLog("open video: $vid was just closed with X, not opened again")
+            return
+        }
         engine.pauseMedia(tabId)
         val existing = TabsReducer.playerTabOf(s, tabId)
         val pid = existing?.id ?: run {
@@ -1645,6 +1800,8 @@ class BrowserViewModel @Inject constructor(
     // ------------------------------------------------------------ EngineListener
 
     override fun onUrlChanged(tabId: Long, url: String) {
+        // The hidden subscriptions page (SYNC_TAB) is no tab of the user's.
+        if (tabId == SYNC_TAB) return
         com.streamshell.core.sponsor.SponsorBlockApi.videoIdOf(url)?.let { vid ->
             if (loggedVideo[tabId] != vid) {
                 loggedVideo[tabId] = vid
@@ -1677,12 +1834,14 @@ class BrowserViewModel @Inject constructor(
     }
 
     override fun onTitle(tabId: Long, url: String?, title: String) {
+        if (tabId == SYNC_TAB) return
         tabs.update { s -> TabsReducer.update(s, tabId) { it.copy(title = title) } }
         if (url != null && settings.value.saveHistory && !isPrivate(tabId)) viewModelScope.launch { library.updateTitle(url, title) }
     }
 
     override fun onVisited(tabId: Long, url: String, title: String) {
-        if (settings.value.saveHistory && !isPrivate(tabId)) viewModelScope.launch { library.recordVisit(url, title) }
+        if (tabId == SYNC_TAB || !settings.value.saveHistory || isPrivate(tabId)) return
+        viewModelScope.launch { library.recordVisit(url, title) }
     }
 
     override fun onNavigationBlocked(tabId: Long, url: String, host: String, decision: FilterDecision.Block) {
@@ -1769,7 +1928,14 @@ class BrowserViewModel @Inject constructor(
     /** The phone's playing page for [com.streamshell.core.media.AudioCoordinator] (calls, navigation voices). */
     private val audioTarget = object : com.streamshell.core.media.AudioTarget {
         override val label = "phone"
-        override fun probe(result: (Boolean) -> Unit) = engine.probeMedia(mediaTabId) { result(it == MediaState.PLAYING) }
+        override fun probe(result: (Boolean) -> Unit) {
+            // While the car screen runs, the phone plays nothing (the car's page is its own target).
+            if (com.streamshell.core.media.CarPresence.active.value) {
+                result(false)
+                return
+            }
+            engine.probeMedia(mediaTabId) { result(it == MediaState.PLAYING) }
+        }
         override fun pause() = engine.pauseMedia(mediaTabId)
         override fun play() = engine.playMedia(mediaTabId)
         override fun duck(on: Boolean) = engine.duckMedia(mediaTabId, on)
@@ -1800,6 +1966,13 @@ fun hostLabel(url: String?): String = UrlHosts.hostOf(url)?.removePrefix("www.")
 
 /** Wait after the feed has loaded before the player is prepared in the background (the feed's own loading comes first). */
 private const val WARM_DELAY_MS = 2500L
+
+/** Hidden page that reads the user's subscriptions from YouTube (0.6.7); never shown, never in the tab list. */
+private const val SYNC_TAB = 9_000_001L
+private const val SYNC_TIMEOUT_MS = 30_000L
+private const val SYNC_SETTLE_MS = 2_500L
+private const val SYNC_SCROLL_MS = 1_500L
+private const val SYNC_SCRIPT_TIMEOUT_MS = 10_000L
 
 /** Quick checks right after a video opens. */
 private const val FAST_PROBES = 6

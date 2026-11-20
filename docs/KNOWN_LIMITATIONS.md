@@ -53,6 +53,102 @@ Status words: **untested on device** (implemented, not verified), **engine limit
 - Android may still discard a background WebView under memory pressure; then the instance reloads when you return. The app cannot prevent that.
 - Not yet tested on a device.
 
+## 0.7.1 (2026-11-06) — **untested on a device** — fixes from the logs of 2026-11-03 and 2026-11-05
+
+- Root cause: every "is this YouTube Music's player page?" check used SponsorBlock's video-id function, which leaves
+  music.youtube.com out on purpose. So on Music's player: pull to refresh was still on (swipe down reloaded the page —
+  log 07:57:50), the track swipe and StreamShell's player bar never appeared, and the notification had no picture.
+  Now a separate MusicSite.playerVideoId is used.
+- Music no longer uses StreamShell's mini player: "minimize" and a swipe down over the upper three quarters of Music's
+  player go one step back in Music's own page — its player collapses into its own bar and the song keeps playing.
+  (To be confirmed on the device: that Music's Back really collapses the player and does not leave the page.)
+- No automatic picture-in-picture while YouTube Music plays (leaving the app: sound continues, notification only).
+- Media notification: YouTube Music's song picture and the label "YouTube Music"; the X (Exit) is now also a session
+  action, because Android 13+ builds its media controls from the session and ignored the notification's own button.
+
+Notifications (user: "Last check: 7 notified", but nothing appeared; checks only while the app is open):
+- "Notified" now means Android really took the notification. Before showing, the permission, the app's notifications
+  and the kind's category are checked; if one is off, nothing is marked and "Last check" says why ("NOT SHOWN: …").
+- "Last check" shows the run's numbers: feeds read / failed, new, first checks (only remembered), category off, bell
+  off / not a favourite, shown. Every background check also writes one line to the diagnostics log (when enabled).
+- Notification settings › Android: notifications allowed or blocked (and why), battery optimization on/off with
+  Android's own "allow in background" dialog (REQUEST_IGNORE_BATTERY_OPTIMIZATIONS), the standby group, and
+  "Send test notification". Some phones additionally need the app's battery use set to "Unrestricted" by hand.
+- A channel whose feed does not answer is read once more through its uploads list (playlist feed UU…).
+- Room database version 2 (two new columns of the check record), migrated in place.
+
+YouTube:
+- Shorts: no swipe-to-minimize (a swipe down is YouTube's "previous Short") and no pull to refresh. Minimizing a video
+  that plays inside the feed tab hands it to the player tab at the same position — no second YouTube tab any more.
+- The mini player's X cancels pending in-page video switches; the same video caught again within 3 s is not reopened.
+- No pull to refresh on YouTube video pages; at the top of a video page a swipe down in the upper half minimizes.
+- Diagnostics: start-up time only from a tap ≤ 15 s before ("unknown" otherwise).
+
+## 0.7.0 (2026-11-03) — **untested on a device and in the car** (Notification Engine, adaptive car navigation)
+
+Notification Engine (no server, no API key, everything on the device):
+- Categories: new videos (on), live stream started (on, high priority), upcoming live streams (on), community posts
+  (**not available** — YouTube has no public, reliable source; StreamShell does not scrape them). Master switch,
+  interval 15 / 30 / 60 / 180 min (default 30), favourites-only filter, bell and favourite per channel, history,
+  last sync, last check, "Sync now" — Settings › Feed › Notifications.
+- Data: Room database `notifications.db` (channels, events with one row per video and kind — never notified twice,
+  sync and check records; history kept 30 days). Preferences in DataStore. Work in WorkManager (network required,
+  exponential retry, no foreground service). Android may delay or batch the checks (Doze, battery saver, app
+  standby buckets) — "every 30 minutes" is a minimum distance, not a guarantee.
+- New uploads come from YouTube's public channel feeds (they do not say whether a video is a live stream). Each new
+  upload (at most 12 per run) is classified through its public watch page (no account; only YouTube's "consent
+  declined" cookie `SOCS=CAI` so the EU consent page is not served instead). If that page cannot be read, the upload
+  counts as an ordinary video — never as live. Scheduled streams are looked at again from 10 min before until 12 h
+  after their start; when one is live, a "live now" notification follows.
+- A live stream that a channel starts **without** scheduling it appears in the feed only when YouTube puts it there —
+  often late, sometimes not before it ends. Such streams may be notified late or as a normal video.
+- Subscriptions sync: YouTube's "All subscriptions" page in the signed-in browser, opened in the background, scrolled
+  to its end (at most 25 rounds), then read. "Complete" only when YouTube showed no "load more" element and the list
+  stopped growing for two rounds; otherwise "partial". Twice a day while the app is open (after 1 h when the last try
+  failed), or "Sync now". The detection of the end of the list depends on YouTube's page markup — if YouTube changes
+  it, syncs show as partial (nothing is removed then).
+- Unsubscribe detection is careful: only channels that came from the sync alone and are missing from two complete
+  syncs in a row are removed. Imported channels are never removed.
+- Without the notification permission (Android 13+) nothing is shown; the screen says so and opens Android's settings.
+- The 0.6.7 job "new-videos" is cancelled and replaced; its "seen" list is not carried over: the first check after
+  the update only remembers the current uploads (no notifications for that run).
+
+Android Auto, option C (adaptive navigation):
+- Placement from the screen's size at the chosen density: ≥ 1.6:1 (DS7, 960×480 dp) → rail at the side (setting
+  "controls on the left"); narrower or portrait → bar at the bottom; below 520×320 dp → one menu button in the corner
+  that opens the navigation over the page.
+- Buttons follow the page: feed and other pages — Home, Search, Back, YouTube, YouTube Music, Library, scroll; video
+  page — Back, Home, Forward, sources (no play controls: YouTube's player has them); covered while driving — Home and
+  the sources only, plus the cover's previous · play/pause · next (sound only). The picture restriction while driving
+  is unchanged.
+- The play bar under the page (0.6.7) is gone. No auto-hide in this version.
+
+## 0.6.7 (2026-11-03) — **untested on device and in the car** (Android Auto: web viewer only; new-video notifications)
+
+Note (2026-11-20): this section and those of 0.6.5–0.6.6 were rewritten after the working copy was lost; the source of
+0.6.5–0.7.1 was restored from the 0.7.1 APK and the session record (see "Source restore" in 0.7.2).
+
+- Android Auto: the 0.6.6 split view is gone. Only the web viewer remains, edge to edge, with the rail (Home, Search,
+  YouTube, YouTube Music, Library, Back, scroll) and a slim header in Android Auto's top band; on a video page a play
+  bar under the page. Car-only page style: the feed as a grid of tiles, the player no higher than 70 % of the screen.
+- New-video notifications: the user's YouTube subscriptions are read from YouTube's "All subscriptions" page in the
+  signed-in browser (a hidden page, never shown; no cookies or tokens read), merged with imported channels; public
+  channel feeds checked every 30 minutes in the background (WorkManager). Bell per channel in Subscriptions; "Watch
+  later" from the notification.
+
+## 0.6.6 (2026-11-02) — **replaced by 0.6.7** (Android Auto split view, Dark Liquid Glass)
+
+- Car design system "Dark Liquid Glass" (CarTheme, CarViews): dark layered surfaces, thin light borders, one violet →
+  cyan accent. The split view itself was removed again in 0.6.7 at the user's request.
+
+## 0.6.5 (2026-11-02) — **untested in the car** (car page size, speed, sound)
+
+- The car page was about twice too large: WebView takes its density from the context it is created with, the car
+  tab is now created with the car screen's own context and loaded only after the surface exists.
+- Speed under Android Auto needs androidx.car.app:app-projected (CarHardwareManager); added.
+- Phone and car fought over the sound (pause / play flicker in the car): while the car session runs, the phone's pages
+  are silenced (CarPresence).
+
 ## 0.6.4 (2026-11-02) — **untested on device** (loading screen, mini player buttons, YouTube Music gestures and ads)
 
 - Log of 05:19 (0.6.3): **no crash** any more when switching YouTube ⇄ YouTube Music (several switches); start-up 0.7–1.8 s.

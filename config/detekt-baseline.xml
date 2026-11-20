@@ -13,6 +13,8 @@
     <ID>ComplexCondition:BrowserViewModel.kt$BrowserViewModel$bg &amp;&amp; (s == MediaState.PLAYING || (want &amp;&amp; PlaybackService.running))</ID>
     <ID>ComplexCondition:BrowserViewModel.kt$BrowserViewModel$com.streamshell.core.browser.YouTubeSite.isYouTube(UrlHosts.hostOf(mediaUrl())) &amp;&amp; (st.volumeBoost != 100 || st.normalizeVolume || audioApplied)</ID>
     <ID>ComplexCondition:BrowserViewModel.kt$BrowserViewModel$s == MediaState.PLAYING &amp;&amp; sleep.value.atEndOfVideo &amp;&amp; sleepKey != null &amp;&amp; key != sleepKey</ID>
+    <ID>ComplexCondition:CarBrowser.kt$CarBrowser$!gate.videoAllowed &amp;&amp; inside(pageFrame, r, x, y) &amp;&amp; !inside(coverControls, r, x, y) &amp;&amp; !onNav</ID>
+    <ID>ComplexCondition:CarDisplay.kt$CarDisplay$width &lt;= 0 || height &lt;= 0 || visRight &lt;= visLeft || visBottom &lt;= visTop</ID>
     <ID>ComplexCondition:FilterList.kt$FilterListParser$!domainRegex.matches(domain) || domain.length &gt; 253 || domain.all { it.isDigit() || it == '.' }</ID>
     <ID>ComplexCondition:FilterList.kt$FilterListParser$host in ignoredHosts || !domainRegex.matches(host) || host.all { it.isDigit() || it == '.' }</ID>
     <ID>ComplexCondition:FilterList.kt$FilterListParser$line.isEmpty() || line.startsWith("!") || line.startsWith("#") || line.startsWith("[")</ID>
@@ -23,9 +25,10 @@
     <ID>ComplexCondition:Storyboard.kt$Storyboard$v[0] &lt;= 0 || v[1] &lt;= 0 || v[2] &lt;= 0 || v[3] &lt;= 0 || v[4] &lt;= 0</ID>
     <ID>CyclomaticComplexMethod:AndroidFilterStores.kt$HttpsFilterListDownloader$override fun download(url: String, allowedHosts: Set&lt;String&gt;, etag: String?, lastModified: String?): DownloadResult</ID>
     <ID>CyclomaticComplexMethod:BrowserEngine.kt$BrowserEngine$@SuppressLint("SetJavaScriptEnabled") private fun createWebView(id: Long, wrapper: MutableContextWrapper): MediaWebView</ID>
+    <ID>CyclomaticComplexMethod:BrowserEngine.kt$BrowserEngine$fun openVideoInPlace(id: Long, url: String)</ID>
     <ID>CyclomaticComplexMethod:BrowserEngine.kt$BrowserEngine.Client$override fun onPageCommitVisible(view: WebView, url: String?)</ID>
     <ID>CyclomaticComplexMethod:BrowserEngine.kt$BrowserEngine.Client$override fun onPageFinished(view: WebView, url: String?)</ID>
-    <ID>CyclomaticComplexMethod:BrowserScreen.kt$@Composable fun BrowserScreen( state: BrowserUiState, layout: WindowLayoutSpec, actions: BrowserActions, page: PageSurface, fullscreen: View?, chrome: BrowserChrome, snackbar: SnackbarHostState, settingsContent: @Composable (onClose: () -&gt; Unit) -&gt; Unit, privacyContent: @Composable (onClose: () -&gt; Unit) -&gt; Unit, modifier: Modifier = Modifier, diagnosticsContent: @Composable (onClose: () -&gt; Unit) -&gt; Unit = {} )</ID>
+    <ID>CyclomaticComplexMethod:BrowserScreen.kt$@Composable fun BrowserScreen( state: BrowserUiState, layout: WindowLayoutSpec, actions: BrowserActions, page: PageSurface, fullscreen: View?, chrome: BrowserChrome, snackbar: SnackbarHostState, settingsContent: @Composable (onClose: () -&gt; Unit) -&gt; Unit, privacyContent: @Composable (onClose: () -&gt; Unit) -&gt; Unit, modifier: Modifier = Modifier, diagnosticsContent: @Composable (onClose: () -&gt; Unit) -&gt; Unit = {}, notificationsContent: @Composable (onClose: () -&gt; Unit) -&gt; Unit = {} )</ID>
     <ID>CyclomaticComplexMethod:BrowserScreen.kt$@Composable private fun AddressField(state: BrowserUiState, actions: BrowserActions, compact: Boolean, modifier: Modifier)</ID>
     <ID>CyclomaticComplexMethod:BrowserScreen.kt$@Composable private fun MenuButton(state: BrowserUiState, actions: BrowserActions, chrome: BrowserChrome)</ID>
     <ID>CyclomaticComplexMethod:BrowserScreen.kt$@Composable private fun PlayerSlideBar( app: com.streamshell.core.browser.SiteApp, state: BrowserUiState, actions: BrowserActions, modifier: Modifier, onSearch: () -&gt; Unit, onMore: () -&gt; Unit )</ID>
@@ -35,14 +38,18 @@
     <ID>CyclomaticComplexMethod:BrowserScreen.kt$@Composable private fun playerBarItem(k: String, state: BrowserUiState): Triple&lt;androidx.compose.ui.graphics.vector.ImageVector, String, Boolean&gt;</ID>
     <ID>CyclomaticComplexMethod:BrowserScreen.kt$@Composable private fun rememberSwipeControls(enabled: Boolean, onExit: () -&gt; Unit, onPinch: (Boolean) -&gt; Unit, onHud: (isVolume: Boolean, level: Float) -&gt; Unit): Modifier</ID>
     <ID>CyclomaticComplexMethod:BrowserScreen.kt$@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class) @Composable private fun SiteMenuSheet( app: com.streamshell.core.browser.SiteApp, state: BrowserUiState, actions: BrowserActions, chrome: BrowserChrome, onDismiss: () -&gt; Unit, onShowBrowserBars: () -&gt; Unit )</ID>
-    <ID>CyclomaticComplexMethod:BrowserScreen.kt$private fun Modifier.pageGestures( video: com.streamshell.core.media.VideoRect?, minimize: Boolean, refresh: Boolean, atTop: () -&gt; Boolean, onMinimize: () -&gt; Unit, onPull: (Float) -&gt; Unit, onRefresh: () -&gt; Unit ): Modifier</ID>
+    <ID>CyclomaticComplexMethod:BrowserScreen.kt$private fun Modifier.pageGestures( video: com.streamshell.core.media.VideoRect?, music: Boolean, videoPage: Boolean, minimize: Boolean, refresh: Boolean, atTop: () -&gt; Boolean, onMinimize: () -&gt; Unit, onPull: (Float) -&gt; Unit, onRefresh: () -&gt; Unit ): Modifier</ID>
     <ID>CyclomaticComplexMethod:BrowserScreen.kt$private fun siteIcon(key: String, on: Boolean)</ID>
+    <ID>CyclomaticComplexMethod:BrowserViewModel.kt$BrowserViewModel$fun syncSubscriptionsSoon(force: Boolean = false)</ID>
     <ID>CyclomaticComplexMethod:BrowserViewModel.kt$BrowserViewModel$override fun onOpenVideo(tabId: Long, url: String)</ID>
     <ID>CyclomaticComplexMethod:BrowserViewModel.kt$BrowserViewModel$private fun trackWatching(s: MediaState)</ID>
+    <ID>CyclomaticComplexMethod:CarBrowser.kt$CarBrowser$override fun onSurfaceAvailable(container: SurfaceContainer)</ID>
     <ID>CyclomaticComplexMethod:FilterList.kt$FilterListParser$private fun parseLine(line: String): DomainRule?</ID>
     <ID>CyclomaticComplexMethod:FilterListRepository.kt$DefaultFilterListRepository$override suspend fun updateAll(onlyIds: Set&lt;String&gt;?): UpdateSummary</ID>
     <ID>CyclomaticComplexMethod:FilterSubscriptions.kt$FilterConfigSerializer$fun decode(raw: String?): FilterConfig</ID>
     <ID>CyclomaticComplexMethod:MainActivity.kt$MainActivity$@Composable private fun Root()</ID>
+    <ID>CyclomaticComplexMethod:NotificationEngine.kt$NotificationEngine$suspend fun run( prefs: NotifyPrefs, watch: WatchData, now: Long = System.currentTimeMillis(), deliver: (List&lt;EventEntity&gt;) -&gt; Delivery ): Outcome</ID>
+    <ID>CyclomaticComplexMethod:NotificationsScreen.kt$@Composable fun NotificationsScreen(state: NotificationsUiState, actions: NotificationsActions, onClose: () -&gt; Unit, modifier: Modifier = Modifier)</ID>
     <ID>CyclomaticComplexMethod:PageMessage.kt$PageMessage.Companion$fun parse(data: String?): PageMessage?</ID>
     <ID>CyclomaticComplexMethod:SettingsRepository.kt$DataStoreSettingsRepository$private fun Preferences.toSettings(): AppSettings</ID>
     <ID>CyclomaticComplexMethod:SettingsRepository.kt$SettingsSanitizer$fun sanitize(s: AppSettings): AppSettings</ID>
@@ -50,6 +57,7 @@
     <ID>CyclomaticComplexMethod:SiteApps.kt$SiteApp$fun destinationOf(url: String?): SiteDestination?</ID>
     <ID>CyclomaticComplexMethod:SponsorBlock.kt$SponsorBlockApi$fun parse(body: String, videoId: String, categories: Set&lt;String&gt;): List&lt;SkipSegment&gt;</ID>
     <ID>CyclomaticComplexMethod:Storyboard.kt$Storyboard$fun frame(spec: String, durationSec: Double, atSec: Int, maxWidth: Int = 160): StoryboardFrame?</ID>
+    <ID>CyclomaticComplexMethod:SubscriptionSyncManager.kt$SyncRules$fun apply(watch: List&lt;Channel&gt;, rows: Map&lt;String, ChannelEntity&gt;, found: List&lt;Channel&gt;, completeSync: Boolean, now: Long): SyncOutcome</ID>
     <ID>CyclomaticComplexMethod:UrlHosts.kt$PageKind$fun of(url: String?): String</ID>
     <ID>CyclomaticComplexMethod:Watch.kt$WatchSerializer$fun decode(raw: (String) -&gt; String?): WatchData</ID>
     <ID>CyclomaticComplexMethod:Watch.kt$WatchSerializer$fun encode(d: WatchData): Map&lt;String, String&gt;</ID>
@@ -58,12 +66,15 @@
     <ID>LargeClass:BrowserViewModel.kt$BrowserViewModel : AndroidViewModelEngineListenerMediaControls</ID>
     <ID>LongMethod:BrowserEngine.kt$BrowserEngine$@SuppressLint("SetJavaScriptEnabled") private fun createWebView(id: Long, wrapper: MutableContextWrapper): MediaWebView</ID>
     <ID>LongMethod:BrowserViewModel.kt$BrowserViewModel$private fun trackWatching(s: MediaState)</ID>
+    <ID>LongMethod:CarBrowser.kt$CarBrowser$override fun onSurfaceAvailable(container: SurfaceContainer)</ID>
+    <ID>LongMethod:NotificationEngine.kt$NotificationEngine$suspend fun run( prefs: NotifyPrefs, watch: WatchData, now: Long = System.currentTimeMillis(), deliver: (List&lt;EventEntity&gt;) -&gt; Delivery ): Outcome</ID>
     <ID>LongMethod:SettingsRepository.kt$DataStoreSettingsRepository$override suspend fun update(transform: (AppSettings) -&gt; AppSettings)</ID>
     <ID>LongMethod:SettingsRepository.kt$DataStoreSettingsRepository$private fun Preferences.toSettings(): AppSettings</ID>
-    <ID>LongParameterList:BrowserScreen.kt$( video: com.streamshell.core.media.VideoRect?, minimize: Boolean, refresh: Boolean, atTop: () -&gt; Boolean, onMinimize: () -&gt; Unit, onPull: (Float) -&gt; Unit, onRefresh: () -&gt; Unit )</ID>
+    <ID>LongParameterList:BrowserScreen.kt$( video: com.streamshell.core.media.VideoRect?, music: Boolean, videoPage: Boolean, minimize: Boolean, refresh: Boolean, atTop: () -&gt; Boolean, onMinimize: () -&gt; Unit, onPull: (Float) -&gt; Unit, onRefresh: () -&gt; Unit )</ID>
     <ID>LongParameterList:BrowserScreen.kt$(w: Int, h: Int, video: com.streamshell.core.media.VideoRect?, x: Float, y: Float, mw: Float, mh: Float)</ID>
     <ID>LongParameterList:BrowserViewModel.kt$BrowserViewModel$( private val app: Application, private val settingsRepo: SettingsRepository, private val library: LibraryRepository, private val privacy: PrivacyCoordinator, private val external: ExternalNavigator, network: NetworkMonitor, @LibraryStore private val store: DataStore&lt;Preferences&gt; )</ID>
     <ID>LongParameterList:CarBrowser.kt$CarBrowser$(target: View, down: Long, time: Long, action: Int, x: Float, y: Float)</ID>
+    <ID>LongParameterList:CarDisplay.kt$CarDisplay$(width: Int, height: Int, visLeft: Int, visTop: Int, visRight: Int, visBottom: Int)</ID>
     <ID>LongParameterList:Watch.kt$WatchRules$(list: List&lt;WatchPosition&gt;, url: String, title: String, position: Double, duration: Double, now: Long)</ID>
     <ID>LongParameterList:YouTubeExtras.kt$YouTubeExtras$( feedCss: String, dislikes: Boolean, deArrow: Boolean, markers: Boolean, diag: Boolean = false, trace: Boolean = false, watched: Collection&lt;String&gt; = emptyList(), channels: Collection&lt;String&gt; = emptyList(), words: Collection&lt;String&gt; = emptyList() )</ID>
     <ID>LoopWithTooManyJumpStatements:BrowserScreen.kt$while</ID>
@@ -127,23 +138,21 @@
     <ID>MagicNumber:BrowserViewModel.kt$BrowserViewModel$5000</ID>
     <ID>MagicNumber:BrowserViewModel.kt$BrowserViewModel$6</ID>
     <ID>MagicNumber:BrowserViewModel.kt$BrowserViewModel$60_000L</ID>
-    <ID>MagicNumber:CarBrowser.kt$CarBrowser$0.5f</ID>
     <ID>MagicNumber:CarBrowser.kt$CarBrowser$12</ID>
     <ID>MagicNumber:CarBrowser.kt$CarBrowser$120</ID>
     <ID>MagicNumber:CarBrowser.kt$CarBrowser$16</ID>
-    <ID>MagicNumber:CarBrowser.kt$CarBrowser$16f</ID>
     <ID>MagicNumber:CarBrowser.kt$CarBrowser$18</ID>
-    <ID>MagicNumber:CarBrowser.kt$CarBrowser$18f</ID>
-    <ID>MagicNumber:CarBrowser.kt$CarBrowser$20</ID>
-    <ID>MagicNumber:CarBrowser.kt$CarBrowser$20f</ID>
-    <ID>MagicNumber:CarBrowser.kt$CarBrowser$24</ID>
-    <ID>MagicNumber:CarBrowser.kt$CarBrowser$26f</ID>
-    <ID>MagicNumber:CarBrowser.kt$CarBrowser$32</ID>
+    <ID>MagicNumber:CarBrowser.kt$CarBrowser$22</ID>
+    <ID>MagicNumber:CarBrowser.kt$CarBrowser$28</ID>
     <ID>MagicNumber:CarBrowser.kt$CarBrowser$4</ID>
+    <ID>MagicNumber:CarBrowser.kt$CarBrowser$6</ID>
     <ID>MagicNumber:CarBrowser.kt$CarBrowser$60</ID>
     <ID>MagicNumber:CarBrowser.kt$CarBrowser$8</ID>
+    <ID>MagicNumber:CarDisplay.kt$CarDisplay$10</ID>
     <ID>MagicNumber:CarDisplay.kt$CarDisplay$3600</ID>
     <ID>MagicNumber:CarDisplay.kt$CarDisplay$60</ID>
+    <ID>MagicNumber:CarViews.kt$CarViews.Companion$0x00FFFFFF</ID>
+    <ID>MagicNumber:CarViews.kt$CarViews.Companion$24</ID>
     <ID>MagicNumber:Community.kt$DeArrowRepository$200</ID>
     <ID>MagicNumber:Community.kt$DeArrowRepository$404</ID>
     <ID>MagicNumber:Community.kt$DeArrowRepository$60</ID>
@@ -288,6 +297,7 @@
     <ID>MaxLineLength:Backup.kt$Backup$deArrow = b("deArrow", d.deArrow)</ID>
     <ID>MaxLineLength:Backup.kt$Backup$feedPreviews = b("feedPreviews", d.feedPreviews)</ID>
     <ID>MaxLineLength:Backup.kt$Backup$fun set(k: String, def: Set&lt;String&gt;)</ID>
+    <ID>MaxLineLength:BrowserEngine.kt$BrowserEngine$*</ID>
     <ID>MaxLineLength:BrowserEngine.kt$BrowserEngine$androidx.webkit.WebViewCompat</ID>
     <ID>MaxLineLength:BrowserEngine.kt$BrowserEngine$fun</ID>
     <ID>MaxLineLength:BrowserEngine.kt$BrowserEngine$if</ID>
@@ -368,9 +378,8 @@
     <ID>MaxLineLength:BrowserScreen.kt$val activity = remember(ctx) { generateSequence(ctx) { (it as? android.content.ContextWrapper)?.baseContext }.firstOrNull { it is android.app.Activity } as? android.app.Activity }</ID>
     <ID>MaxLineLength:BrowserScreen.kt$val anim by androidx.compose.animation.core.animateFloatAsState(if (refreshing) 1f else pull.coerceAtMost(1.2f), androidx.compose.animation.core.spring(stiffness = 900f), label = "pull")</ID>
     <ID>MaxLineLength:BrowserScreen.kt$val bandAlpha by androidx.compose.animation.core.animateFloatAsState(if (loadingBand) 1f else 0f, androidx.compose.animation.core.tween(180), label = "band")</ID>
-    <ID>MaxLineLength:BrowserScreen.kt$val playerBar = state.settings.playerActionRow &amp;&amp; (state.onYouTube || state.onMusic) &amp;&amp; state.isVideoPage &amp;&amp; state.miniTabId != state.active.id</ID>
+    <ID>MaxLineLength:BrowserScreen.kt$val playerBar = state.settings.playerActionRow &amp;&amp; ((state.onYouTube &amp;&amp; state.isVideoPage) || state.isMusicPlayer) &amp;&amp; state.miniTabId != state.active.id</ID>
     <ID>MaxLineLength:BrowserScreen.kt$val sheet = ThumbCache.get(frame.url) ?: com.streamshell.core.media.Thumbnails.fetch(frame.url, crop16x9 = false)?.also { ThumbCache.put(frame.url, it) }</ID>
-    <ID>MaxLineLength:BrowserScreen.kt$val swipe = isActive &amp;&amp; !isMini &amp;&amp; !chrome.inPip &amp;&amp; state.settings.swipeToMinimize &amp;&amp; (!panelOpen || video != null) &amp;&amp; state.canMinimize &amp;&amp; state.media != com.streamshell.core.media.MediaState.NONE</ID>
     <ID>MaxLineLength:BrowserScreen.kt${ IconButton(onClick = { value = TextFieldValue("") }, modifier = Modifier.testTag("address-clear")) { Icon(StreamIcons.Close, "Clear", Modifier.size(20.dp)) } }</ID>
     <ID>MaxLineLength:BrowserViewModel.kt$BrowserViewModel$async { sem.withPermit { runCatching { com.streamshell.core.watch.ChannelFeed.parse(FeedFetcher.fetch(com.streamshell.core.watch.ChannelFeed.urlOf(c.id))).map { it.copy(channelId = c.id) } }.getOrNull() } }</ID>
     <ID>MaxLineLength:BrowserViewModel.kt$BrowserViewModel$combine(combine(watchData, sleep, feed) { w, sl, f -&gt; Triple(w, sl, f) }, focusSearch, chatPage, queue, player) { t3, fs, cp, q, pl -&gt; arrayOf&lt;Any?&gt;(t3.first, t3.second, t3.third, fs, cp, q, pl) }</ID>
@@ -389,7 +398,15 @@
     <ID>MaxLineLength:BrowserViewModel.kt$BrowserViewModel$viewModelScope.launch { watchRepo.update { w -&gt; w.copy(positions = w.positions.filterNot { it.key == com.streamshell.core.watch.WatchRules.keyOf(url) }) } }</ID>
     <ID>MaxLineLength:BrowserViewModel.kt$BrowserViewModel$watchRepo.update { w -&gt; w.copy(playlists = com.streamshell.core.watch.Playlists.add(w.playlists, clean, url, s.page.title, System.currentTimeMillis())) }</ID>
     <ID>MaxLineLength:BrowserViewModel.kt$FeedState$data</ID>
-    <ID>MaxLineLength:CarBrowser.kt$CarBrowser$main.post { r.setPadding(visibleArea.left, visibleArea.top, (r.width - visibleArea.right).coerceAtLeast(0), (r.height - visibleArea.bottom).coerceAtLeast(0)) }</ID>
+    <ID>MaxLineLength:CarBrowser.kt$CarBrowser$addView(engine.attach(PAGE_ID, v.context, createInContext = true), FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))</ID>
+    <ID>MaxLineLength:CarBrowser.kt$CarBrowser$addView(tag, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = v.px(CarTheme.GAP) })</ID>
+    <ID>MaxLineLength:CarBrowser.kt$CarBrowser$box.addView(m, FrameLayout.LayoutParams(size, size, side or Gravity.BOTTOM).apply { setMargins(v.px(CarTheme.GAP), 0, v.px(CarTheme.GAP), v.px(CarTheme.GAP)) })</ID>
+    <ID>MaxLineLength:CarBrowser.kt$CarBrowser$log(if (show) "cover on: picture hidden, page taps ignored; sound, navigation and cover controls work" else "cover off: picture shown, page taps on")</ID>
+    <ID>MaxLineLength:CarBrowser.kt$CarBrowser$row.addView(play, LinearLayout.LayoutParams(v.px(CarTheme.PLAY_BUTTON + 12), v.px(CarTheme.PLAY_BUTTON + 12)).apply { setMargins(v.px(16), 0, v.px(16), 0) })</ID>
+    <ID>MaxLineLength:CarBrowser.kt$CarBrowser$val m = v.iconButton(R.drawable.ic_car_menu, "Menu", MENU_PAD) { nav.visibility = if (nav.visibility == View.VISIBLE) View.GONE else View.VISIBLE }</ID>
+    <ID>MaxLineLength:CarBrowser.kt$CarBrowser.&lt;no name provided&gt;$if (com.streamshell.core.browser.YouTubeSite.isYouTube(com.streamshell.core.browser.UrlHosts.hostOf(url))) engine.run(PAGE_ID, CarDisplay.PAGE_STYLE)</ID>
+    <ID>MaxLineLength:CarDisplay.kt$CarDisplay$"s.textContent='.rich-grid-renderer-contents{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));column-gap:16px;row-gap:8px;padding:0 12px!important}"</ID>
+    <ID>MaxLineLength:CarViews.kt$CarViews$fun</ID>
     <ID>MaxLineLength:ContinueWidget.kt$ContinueWidget.Companion$if (app != null) v.setOnClickPendingIntent(R.id.widget_header, PendingIntent.getActivity(context, HEADER_REQUEST, app, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))</ID>
     <ID>MaxLineLength:ContinueWidget.kt$ContinueWidget.Companion$v.setOnClickPendingIntent(row, PendingIntent.getActivity(context, i, open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))</ID>
     <ID>MaxLineLength:ContinueWidget.kt$WidgetSnapshot$list.filter { it.url.startsWith("https://") }.take(MAX).forEach { a.put(JSONObject().put("u", it.url).put("t", it.title.take(120)).put("p", it.position).put("d", it.duration)) }</ID>
@@ -427,9 +444,11 @@
     <ID>MaxLineLength:LibraryPanels.kt$text = { OutlinedTextField(value = to, onValueChange = { to = it.take(Playlists.MAX_NAME) }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("playlist-rename-field")) }</ID>
     <ID>MaxLineLength:MainActivity.kt$MainActivity$Modifier.fillMaxSize().traceTouches(trace, { (view as? androidx.compose.ui.node.RootForTest)?.semanticsOwner }, density) { line -&gt; browser.trace("ui", line) }</ID>
     <ID>MaxLineLength:MainActivity.kt$MainActivity$androidx.compose.runtime.LaunchedEffect(pageDark) { browser.engine.setPageBackground(if (pageDark) 0xFF0F0F0F.toInt() else android.graphics.Color.WHITE) }</ID>
+    <ID>MaxLineLength:MainActivity.kt$MainActivity$if (MediaPolicy.shouldAutoPip(s.settings.autoPip, pipSupported, browser.engine.fullscreenView.value != null, s.media, MediaPolicy.playingMusic())) enterPip()</ID>
     <ID>MaxLineLength:MainActivity.kt$MainActivity$onImportSubscriptions = { runCatching { importSubscriptions.launch(arrayOf("text/csv", "text/comma-separated-values", "text/plain", "application/json", "application/octet-stream")) } }</ID>
     <ID>MaxLineLength:MainActivity.kt$MainActivity$val back = BackPolicy.resolve(fullscreen != null, s.nav, pageCanGoBack = !s.showingStart &amp;&amp; s.page.canGoBack, canReturnToStart = !s.showingStart &amp;&amp; s.active.openedFromStart)</ID>
     <ID>MaxLineLength:MainActivity.kt$MainActivity$val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_SUBJECT, "StreamShell diagnostics").putExtra(Intent.EXTRA_TEXT, text)</ID>
+    <ID>MaxLineLength:MediaPolicy.kt$MediaBridge$fun</ID>
     <ID>MaxLineLength:MediaPolicy.kt$MediaPolicy$fun</ID>
     <ID>MaxLineLength:MediaPolicy.kt$MediaScripts$"if(mp&amp;&amp;mp.seekTo&amp;&amp;mp.getCurrentTime&amp;&amp;mp.getDuration){var c=mp.getCurrentTime(),du=mp.getDuration();if(isFinite(c)&amp;&amp;du&gt;0){mp.seekTo(Math.max(0,Math.min(du-0.5,c+d)),true);return 'yt';}}"</ID>
     <ID>MaxLineLength:MediaPolicy.kt$MediaScripts$"if(on){if(v.__ssVol==null){v.__ssVol=v.volume;v.volume=Math.min(v.volume,0.25);}}else if(v.__ssVol!=null){v.volume=v.__ssVol;v.__ssVol=null;}}catch(x){}}return 'ok';})("</ID>
@@ -438,6 +457,24 @@
     <ID>MaxLineLength:Models.kt$VideoQuality$val OPTIONS = listOf("auto" to "Auto", "hd2160" to "2160p", "hd1440" to "1440p", "hd1080" to "1080p", "hd720" to "720p", "large" to "480p", "medium" to "360p", "small" to "240p")</ID>
     <ID>MaxLineLength:MusicSite.kt$MediaSessionScripts$const</ID>
     <ID>MaxLineLength:MusicSite.kt$MediaSessionScripts$val buttons = if (a == NEXT) ".next-button,.ytp-next-button,button.player-control-next" else ".previous-button,.ytp-prev-button,button.player-control-previous"</ID>
+    <ID>MaxLineLength:NotificationEngine.kt$NotificationDispatcher$.</ID>
+    <ID>MaxLineLength:NotificationEngine.kt$NotificationDispatcher$Intent(Intent.ACTION_VIEW, url.toUri()).setClass(context, com.streamshell.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)</ID>
+    <ID>MaxLineLength:NotificationEngine.kt$NotificationEngine$val delivery = if (out.isEmpty()) Delivery(emptyList()) else runCatching { deliver(out) }.getOrElse { Delivery(emptyList(), "error: ${it.javaClass.simpleName}") }</ID>
+    <ID>MaxLineLength:NotificationEngine.kt$NotificationWorker$com.streamshell.core.diag.DiagnosticsHub.add("notify", "background check: ${r.channels} channels · " + r.stats.text(r.delivery.shown.size, r.delivery.problem))</ID>
+    <ID>MaxLineLength:NotificationsScreen.kt$"Android may hold back the checks while StreamShell is closed. Tap and choose \"Allow\" (on some phones also set the app's battery use to \"Unrestricted\")."</ID>
+    <ID>MaxLineLength:NotificationsScreen.kt$"New uploads of your channels are checked in the background, with a network connection and when Android allows it (battery saving can delay a check). Nothing is sent anywhere except the requests for YouTube's public pages."</ID>
+    <ID>MaxLineLength:NotificationsScreen.kt$"StreamShell is exempt from battery optimization; checks can run while the app is closed." + (state.system.bucket?.let { " Android standby group: $it." }.orEmpty())</ID>
+    <ID>MaxLineLength:NotificationsScreen.kt$ActionRow("Send test notification", state.testResult ?: "Shows one notification in the \"New videos\" category right now.", "notify-test") { actions.onTest() }</ID>
+    <ID>MaxLineLength:NotificationsScreen.kt$ActionRow("Sync now", "Reads your subscriptions from YouTube now, then checks all channels once.", "notify-sync-now") { actions.onSyncNow() }</ID>
+    <ID>MaxLineLength:NotificationsScreen.kt$ChipRow</ID>
+    <ID>MaxLineLength:NotificationsScreen.kt$SwitchRow</ID>
+    <ID>MaxLineLength:NotificationsScreen.kt$SwitchRow("Community posts", "Not available: YouTube offers no public, reliable source for community posts, and StreamShell does not scrape them.", false, tag = "notify-community") { }</ID>
+    <ID>MaxLineLength:NotificationsScreen.kt$SwitchRow("Favourites only", "Only channels marked with the star below notify.", s.notifyFavoritesOnly, tag = "notify-favorites-only") { v -&gt; actions.onUpdate { it.copy(notifyFavoritesOnly = v) } }</ID>
+    <ID>MaxLineLength:NotificationsScreen.kt$SwitchRow("Live stream started", "Shown with high priority.", s.notifyLive, tag = "notify-live") { v -&gt; actions.onUpdate { it.copy(notifyLive = v) } }</ID>
+    <ID>MaxLineLength:NotificationsScreen.kt$SwitchRow("New videos", null, s.newVideoNotifications, tag = "notify-videos") { v -&gt; actions.onUpdate { it.copy(newVideoNotifications = v) } }</ID>
+    <ID>MaxLineLength:NotificationsScreen.kt$contentPadding = androidx.compose.foundation.layout.PaddingValues(start = Spacing.md, end = Spacing.md, top = Spacing.sm, bottom = Spacing.xl)</ID>
+    <ID>MaxLineLength:NotifyDatabase.kt$NotifyDatabase.Companion$instance ?: Room.databaseBuilder(context.applicationContext, NotifyDatabase::class.java, "notifications.db").addMigrations(MIGRATION_1_2).build().also { instance = it }</ID>
+    <ID>MaxLineLength:NotifyRules.kt$NotifyRules$fun</ID>
     <ID>MaxLineLength:Panels.kt$"Counts only requests StreamShell itself refused. Video ads served from the same servers as the video cannot be separated by domain and are not blocked."</ID>
     <ID>MaxLineLength:Panels.kt$Column</ID>
     <ID>MaxLineLength:Panels.kt$EmptyState("history-empty", if (query.isBlank()) "No history" else "Nothing found", if (query.isBlank()) "Pages you visit appear here. They stay on this device." else "No visited page matches “$query”.")</ID>
@@ -452,6 +489,7 @@
     <ID>MaxLineLength:Panels.kt$trailingContent = { IconButton(onClick = { actions.onRemoveHistory(h.url) }, modifier = Modifier.testTag("history-remove")) { Icon(StreamIcons.Close, "Remove from history") } }</ID>
     <ID>MaxLineLength:PlaybackService.kt$PlaybackService$PlaybackState.ACTION_REWIND</ID>
     <ID>MaxLineLength:PlaybackService.kt$PlaybackService$val pi = PendingIntent.getService(this, act.hashCode(), Intent(this, PlaybackService::class.java).setAction(act), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)</ID>
+    <ID>MaxLineLength:PlayerOpen.kt$PlayerOpen$fun justClosed(videoId: String, closedId: String?, closedAt: Long, now: Long): Boolean</ID>
     <ID>MaxLineLength:PlayerScripts.kt$PlayerScripts$"document.addEventListener('ratechange',function(e){var v=e.target;if(window.__ssSetting||!v||v.tagName!=='VIDEO'||ad()||Date.now()-tapAt&gt;4000)return;var r=v.playbackRate;if(r&gt;0&amp;&amp;r&lt;=2)window.__ssRate=r;},true);}"</ID>
     <ID>MaxLineLength:PlayerScripts.kt$PlayerScripts$"function apply(v){if(!ad()&amp;&amp;v&amp;&amp;v.playbackRate!==window.__ssRate&amp;&amp;v.playbackRate&lt;=2){window.__ssSetting=true;v.playbackRate=window.__ssRate;window.__ssSetting=false;}}"</ID>
     <ID>MaxLineLength:PlayerScripts.kt$PlayerScripts$"if(!window.__ssRateHook){window.__ssRateHook=true;document.addEventListener('playing',function(e){if(e.target&amp;&amp;e.target.tagName==='VIDEO')apply(e.target);},true);"</ID>
@@ -491,6 +529,7 @@
     <ID>MaxLineLength:SettingsScreen.kt$"Replaces clickbait titles with titles written by the DeArrow community (the original stays as tooltip). Only a 4-character hash prefix of each video ID is sent to sponsor.ajay.app. Data: DeArrow contributors, CC BY-NC-SA 4.0."</ID>
     <ID>MaxLineLength:SettingsScreen.kt$"Shows the dislike count next to YouTube's dislike button (Return YouTube Dislike: an estimate from archived data and its users). When on, the ID of each video you open and your IP address go to returnyoutubedislikeapi.com (a third party). Off by default."</ID>
     <ID>MaxLineLength:SettingsScreen.kt$"YouTube and YouTube Music open like apps: no browser bars, the site's sections at the bottom, search and browser functions under More. On YouTube its own top and bottom bars are hidden so videos start at the player. Turn off if a page looks wrong."</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$(if (s.notifyEnabled) "On" else "Off") + " · new videos, live streams and scheduled streams of your subscriptions, checked every ${s.notifyIntervalMin} min. Channels, favourites, sync and history."</ID>
     <ID>MaxLineLength:SettingsScreen.kt$ActionRow("Back up to a file", "Bookmarks, history, Watch later, positions, watch time, channels and settings as one JSON file. No passwords or sign-ins. The file is NOT encrypted: anyone who gets it can read your history — keep it private.", "backup-export", actions.onBackup)</ID>
     <ID>MaxLineLength:SettingsScreen.kt$ActionRow("Reset settings", "All settings on this page back to their defaults. AdBlock &amp; Privacy settings, bookmarks, history, Watch later and sign-ins are kept.", "reset-settings") { confirmReset = true }</ID>
     <ID>MaxLineLength:SettingsScreen.kt$Button(onClick = { onConfirm(history, cookies, cache) }, enabled = history || cookies || cache, modifier = Modifier.testTag("clear-data-confirm")) { Text("Clear") }</ID>
@@ -506,6 +545,7 @@
     <ID>MaxLineLength:SettingsScreen.kt$QualityRow("Video quality on mobile data (YouTube)", "quality-mobile", s.qualityMobile) { q -&gt; actions.onUpdate { it.copy(qualityMobile = q) } }</ID>
     <ID>MaxLineLength:SettingsScreen.kt$SettingsSearch$"break reminder leave player mini close action row captions subtitles language android auto car rail left right music source calls navigation radar voice duck audio"</ID>
     <ID>MaxLineLength:SettingsScreen.kt$SettingsSearch$const</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$SettingsSearch$const val FEED = "feed previews shorts watched hide blocked channels words keywords posts playables filter new video notifications live streams upcoming subscriptions bell favourites sync"</ID>
     <ID>MaxLineLength:SettingsScreen.kt$SettingsSearch$const val YOUTUBE = "youtube app mode autoplay minimize refresh ads sponsorblock segments timeline dislikes dearrow titles diagnostics log trace everything admin logging button"</ID>
     <ID>MaxLineLength:SettingsScreen.kt$SwitchRow</ID>
     <ID>MaxLineLength:SettingsScreen.kt$Text("Asked of YouTube's player when a video starts. YouTube may choose lower when the connection is slow, or ignore it.", style = MaterialTheme.typography.bodySmall, color = StreamTheme.colors.textSecondary, modifier = Modifier.padding(horizontal = Spacing.md))</ID>
@@ -555,6 +595,10 @@
     <ID>MaxLineLength:Storyboard.kt$Storyboard$val pick = levels.indices.lastOrNull { levels[it]?.let { l -&gt; l.w &lt;= maxWidth } == true } ?: levels.indices.firstOrNull { levels[it] != null } ?: return null</ID>
     <ID>MaxLineLength:StreamShellCarService.kt$CarSession$e.setExtras(YouTubeExtras.config("", dislikes = false, deArrow = false, markers = false, diag = s.diagnostics, trace = s.diagnostics &amp;&amp; s.traceEverything))</ID>
     <ID>MaxLineLength:StreamShellCarService.kt$CarSession$log("session started (${b.source.title}, rail ${if (b.railLeft) "left" else "right"}, settings ${if (first == null) "not read, defaults" else "read"})")</ID>
+    <ID>MaxLineLength:SubscriptionSync.kt$SubscriptionSync$"try{var a=document.querySelectorAll('a[href*=\"/channel/UC\"]');for(var i=0;i&lt;a.length;i++){var m=a[i].getAttribute('href').match(/\\/channel\\/(UC[A-Za-z0-9_-]{22})/);"</ID>
+    <ID>MaxLineLength:SubscriptionSync.kt$SubscriptionSync$"try{var r=document.querySelectorAll('ytm-channel-list-item-renderer,ytd-channel-renderer,ytm-compact-channel-renderer');for(var j=0;j&lt;r.length;j++){walk(r[j].data||(r[j].__data&amp;&amp;r[j].__data.data),0);}}catch(e){}"</ID>
+    <ID>MaxLineLength:SubscriptionSync.kt$SubscriptionSync$const</ID>
+    <ID>MaxLineLength:SubscriptionSyncManager.kt$SubscriptionSyncManager$val o = outcome ?: return SyncRunEntity(at = now, channels = 0, complete = false, added = 0, removed = 0, error = "not saved").also { dao.insertSync(it) }</ID>
     <ID>MaxLineLength:Trace.kt$DiagnosticsSummary$add("screen stutter: " + if (jk.isEmpty()) "none logged" else "${jk.sumOf { it[1].toInt() }} frames over 50 ms, worst ${jk.maxOf { it[2].toInt() }} ms")</ID>
     <ID>MaxLineLength:Trace.kt$DiagnosticsSummary$add("session: ${clock(span)} · lines ${lines.size}" + (if (dropped &gt; 0) " (oldest $dropped dropped)" else "") + (if (limited &gt; 0) " · $limited lines refused by the rate limit" else ""))</ID>
     <ID>MaxLineLength:Trace.kt$DiagnosticsSummary$add("videos opened: $opened · started: ${starts.size}" + if (starts.isNotEmpty()) " · start-up median ${starts[starts.size / 2]} ms, worst ${starts.last()} ms" else "")</ID>
@@ -616,6 +660,8 @@
     <ID>NestedBlockDepth:Community.kt$UrlConnectionJsonHttp$override fun get(url: String): Pair&lt;Int, String&gt;</ID>
     <ID>NestedBlockDepth:FeedFetcher.kt$FeedFetcher$fun fetch(url: String): String</ID>
     <ID>NestedBlockDepth:FilterListRepository.kt$DefaultFilterListRepository$private fun rebuild()</ID>
+    <ID>NestedBlockDepth:NewVideoWork.kt$FeedFetch$fun fetch(url: String): String</ID>
+    <ID>NestedBlockDepth:NotificationEngine.kt$WatchPage$private fun fetch(url: String): String?</ID>
     <ID>NestedBlockDepth:PlaybackService.kt$Thumbnails$fun fetch(url: String, crop16x9: Boolean = true): android.graphics.Bitmap?</ID>
     <ID>NestedBlockDepth:SearchSuggestions.kt$SearchSuggestions$fun fetch(query: String, lang: String): List&lt;String&gt;</ID>
     <ID>NestedBlockDepth:SponsorBlock.kt$SponsorBlockApi$fun parse(body: String, videoId: String, categories: Set&lt;String&gt;): List&lt;SkipSegment&gt;</ID>
@@ -629,7 +675,9 @@
     <ID>ReturnCount:BrowserEngine.kt$PageColors$fun parse(raw: String?): Int?</ID>
     <ID>ReturnCount:BrowserViewModel.kt$BrowserViewModel$fun minimize()</ID>
     <ID>ReturnCount:BrowserViewModel.kt$BrowserViewModel$override fun onOpenVideo(tabId: Long, url: String)</ID>
+    <ID>ReturnCount:BrowserViewModel.kt$BrowserViewModel$override fun onUrlChanged(tabId: Long, url: String)</ID>
     <ID>ReturnCount:CarBrowser.kt$CarBrowser$override fun onSurfaceAvailable(container: SurfaceContainer)</ID>
+    <ID>ReturnCount:CarBrowser.kt$CarBrowser$private fun updateNav()</ID>
     <ID>ReturnCount:Community.kt$DislikeRepository$suspend fun dislikes(videoId: String): Long?</ID>
     <ID>ReturnCount:ExternalLinks.kt$ExternalLinks$fun youtubeWatch(url: String): String?</ID>
     <ID>ReturnCount:FilterEngine.kt$DomainFilterEngine$override fun evaluate(requestHost: String, pageHost: String?): FilterDecision</ID>
@@ -639,7 +687,11 @@
     <ID>ReturnCount:MainActivity.kt$MainActivity$private fun handleViewIntent(intent: Intent?)</ID>
     <ID>ReturnCount:MediaPolicy.kt$MediaPolicy$fun pipCrop(viewW: Int, viewH: Int, video: VideoRect?, boxW: Int, boxH: Int): PipCrop?</ID>
     <ID>ReturnCount:MediaPolicy.kt$MediaScripts$fun parseProbe(result: String?): MediaProbe</ID>
+    <ID>ReturnCount:MusicSite.kt$MusicSite$fun playerVideoId(url: String?): String?</ID>
     <ID>ReturnCount:NavigationPolicy.kt$NavigationPolicy$fun intentFallback(intentUri: String): String?</ID>
+    <ID>ReturnCount:NotificationEngine.kt$NotificationDispatcher$fun blockedReason(context: Context, kind: EventKind): String?</ID>
+    <ID>ReturnCount:NotificationEngine.kt$NotificationDispatcher$fun show(context: Context, events: List&lt;EventEntity&gt;): Delivery</ID>
+    <ID>ReturnCount:NotificationEngine.kt$NotificationDispatcher$fun test(context: Context): String</ID>
     <ID>ReturnCount:PageMessage.kt$PageMessage.Companion$fun parse(data: String?): PageMessage?</ID>
     <ID>ReturnCount:Platform.kt$AndroidExternalNavigator$override fun open(uri: String): Boolean</ID>
     <ID>ReturnCount:PlaybackService.kt$PlaybackService$override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int</ID>
@@ -653,6 +705,9 @@
     <ID>ReturnCount:SponsorBlock.kt$SponsorBlockApi$fun videoIdOf(url: String?): String?</ID>
     <ID>ReturnCount:SponsorBlock.kt$SponsorBlockRepository$suspend fun segments(videoId: String, categories: Set&lt;String&gt;): List&lt;SkipSegment&gt;</ID>
     <ID>ReturnCount:Storyboard.kt$Storyboard$fun frame(spec: String, durationSec: Double, atSec: Int, maxWidth: Int = 160): StoryboardFrame?</ID>
+    <ID>ReturnCount:SubscriptionSync.kt$SubscriptionSync$fun parse(raw: String?): List&lt;Channel&gt;</ID>
+    <ID>ReturnCount:SubscriptionSync.kt$SubscriptionSync$fun parseProgress(raw: String?): Progress?</ID>
+    <ID>ReturnCount:SubscriptionSyncManager.kt$SubscriptionSyncManager$suspend fun record(found: List&lt;Channel&gt;, complete: Boolean, error: String?, now: Long = System.currentTimeMillis()): SyncRunEntity</ID>
     <ID>ReturnCount:Tabs.kt$TabsReducer$fun close(s: TabsState, id: Long): TabsState</ID>
     <ID>ReturnCount:Tabs.kt$TabsReducer$fun freshStart(s: TabsState, defaultInstance: String?, instanceHome: String?): TabsState</ID>
     <ID>ReturnCount:Trace.kt$Gestures$fun classify(dxDp: Float, dyDp: Float, durationMs: Long, pointers: Int): String</ID>
@@ -670,6 +725,7 @@
     <ID>ReturnCount:Watch.kt$WatchRules$fun resumeAt(list: List&lt;WatchPosition&gt;, url: String): Double?</ID>
     <ID>ReturnCount:Watch.kt$WatchRules$fun resumeDecision(list: List&lt;WatchPosition&gt;, url: String, current: Double): Resume</ID>
     <ID>ReturnCount:YouTubeAds.kt$YouTubeTimestamps$fun seconds(t: String?): Int?</ID>
+    <ID>TooGenericExceptionCaught:BrowserViewModel.kt$BrowserViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FilterListRepository.kt$DefaultFilterListRepository$e: Exception</ID>
     <ID>TooManyFunctions:AppModule.kt$AppModule</ID>
     <ID>TooManyFunctions:BrowserEngine.kt$BrowserEngine</ID>
@@ -677,9 +733,12 @@
     <ID>TooManyFunctions:BrowserScreen.kt$com.streamshell.feature.browser.BrowserScreen.kt</ID>
     <ID>TooManyFunctions:BrowserViewModel.kt$BrowserViewModel : AndroidViewModelEngineListenerMediaControls</ID>
     <ID>TooManyFunctions:CarBrowser.kt$CarBrowser : SurfaceCallback</ID>
+    <ID>TooManyFunctions:CarViews.kt$CarViews</ID>
     <ID>TooManyFunctions:FilterListRepository.kt$DefaultFilterListRepository : FilterListRepository</ID>
     <ID>TooManyFunctions:Glass.kt$com.streamshell.designsystem.Glass.kt</ID>
     <ID>TooManyFunctions:MainActivity.kt$MainActivity : ComponentActivity</ID>
+    <ID>TooManyFunctions:NotificationEngine.kt$NotificationDispatcher</ID>
+    <ID>TooManyFunctions:NotifyDatabase.kt$NotifyDao</ID>
     <ID>TooManyFunctions:PlayerScripts.kt$PlayerScripts</ID>
     <ID>TooManyFunctions:PrivacyScreen.kt$com.streamshell.feature.privacy.PrivacyScreen.kt</ID>
     <ID>TooManyFunctions:PrivacyViewModel.kt$PrivacyViewModel : ViewModel</ID>

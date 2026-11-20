@@ -118,7 +118,21 @@ data class AppSettings(
     /** Android Auto: what opens first in the car, "youtube" or "music" (switchable on the car screen's rail). */
     val carSource: String = "youtube",
     /** Pause for phone/internet calls and lower the volume while another app's navigation or radar voice speaks. */
-    val yieldAudio: Boolean = true
+    val yieldAudio: Boolean = true,
+    /** Notifications for new videos of the user's channels (0.6.7; since 0.7.0 the "New videos" category). */
+    val newVideoNotifications: Boolean = true,
+    /** Notification Engine (0.7.0): master switch. */
+    val notifyEnabled: Boolean = true,
+    /** Notification Engine: a channel started a live stream. */
+    val notifyLive: Boolean = true,
+    /** Notification Engine: a channel scheduled a live stream. */
+    val notifyUpcoming: Boolean = true,
+    /** Notification Engine: community posts — no reliable source, always off (kept for later). */
+    val notifyCommunity: Boolean = false,
+    /** Notification Engine: minutes between background checks (see NotifyRules.INTERVALS_MIN). */
+    val notifyIntervalMin: Int = 30,
+    /** Notification Engine: only channels marked as favourites notify. */
+    val notifyFavoritesOnly: Boolean = false
 )
 
 /** Accent colours offered in Settings (key → ARGB). */
@@ -150,6 +164,9 @@ enum class Overlay(val route: String?) {
 
     /** AdBlock & Privacy; reached from Settings or the shield, closing it returns to where it came from. */
     Privacy("privacy"),
+
+    /** Notification settings (0.7.0); reached from Settings, closing it returns there. */
+    Notifications("notifications"),
     WatchLater("watch-later"),
     Subscriptions("subscriptions"),
     WatchTime("watch-time"),

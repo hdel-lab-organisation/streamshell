@@ -6,6 +6,16 @@ package com.streamshell.core.browser
  * ready, and never played).
  */
 object PlayerOpen {
+    /** After the mini player's X, the same video caught again within this time is not reopened (0.7.1). */
+    const val CLOSED_GRACE_MS = 3000L
+
+    fun justClosed(videoId: String, closedId: String?, closedAt: Long, now: Long): Boolean = closedId != null && videoId == closedId && now - closedAt in 0..CLOSED_GRACE_MS
+
+    /** Start-up time "tap to playing" counts only when the tap was this recent (0.7.1: one was 319604 ms). */
+    const val STARTUP_MAX_MS = 15_000L
+
+    fun startupMs(openedAt: Long, playingAt: Long): Long? = (playingAt - openedAt).takeIf { it in 0..STARTUP_MAX_MS }
+
     enum class Mode {
         /** Same page, new address (history + popstate): no new page load. */
         IN_PAGE,

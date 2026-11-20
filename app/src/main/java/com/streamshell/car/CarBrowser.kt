@@ -2,11 +2,9 @@ package com.streamshell.car
 
 import android.app.Presentation
 import android.content.Context
-import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Rect
 import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.RippleDrawable
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.os.Handler
@@ -20,7 +18,6 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.car.app.SurfaceCallback
 import androidx.car.app.SurfaceContainer
@@ -29,19 +26,21 @@ import com.streamshell.core.browser.BrowserEngine
 import com.streamshell.core.browser.PageKind
 import com.streamshell.core.browser.SiteApp
 import com.streamshell.core.media.MediaState
-import com.streamshell.core.media.PlayerScripts
 
 /**
  * StreamShell on the car screen. Android Auto gives a navigation app a surface to draw on; a private virtual display
  * is put on that surface and a [Presentation] on it holds the browser (the same engine and YouTube scripts as on the
  * phone). Taps and drags from the car screen are passed on as touches.
  *
- * Layout (0.6.0): a control rail at the left or right edge (search, home, back, scroll up/down), the page on the rest,
- * and on a video page a play bar at the bottom (−10 s, play/pause, +10 s, time and progress). The virtual display's
- * density is chosen by [CarDisplay.optimalDpi], not taken from the car.
+ * Layout (0.7.0, option C "adaptive navigation"): the page fills the screen edge to edge under a slim header in
+ * Android Auto's top band (source and page title; the band's right part is Android Auto's buttons). The navigation
+ * adapts: a rail at one side on wide screens (≥ 1.6:1, e.g. the DS7), a bar at the bottom on narrower or portrait
+ * screens, one menu button on very small ones ([CarDisplay.navPlacement]); its buttons follow the page
+ * ([CarDisplay.navItems]). No play bar: YouTube's own player has the controls. Colours from [CarTheme], views from
+ * [CarViews]. The virtual display's density is chosen by [CarDisplay.optimalDpi].
  *
- * While [gate] does not allow video, a black cover hides the page (the sound keeps playing) and taps on the page are
- * ignored; the rail and the play bar stay usable.
+ * While [gate] does not allow video, the page is covered (the sound keeps playing) and taps on it are ignored; the
+ * navigation (Home, sources) and the cover's previous · play · next stay usable. ParkGate itself is unchanged.
  */
 class CarBrowser(
     private val context: Context,
@@ -53,7 +52,7 @@ class CarBrowser(
     private val main = Handler(Looper.getMainLooper())
     private var display: VirtualDisplay? = null
     private var presentation: Presentation? = null
-    private var root: LinearLayout? = null
+    private var root: FrameLayout? = null
     private var pageFrame: FrameLayout? = null
     private var cover: View? = null
     private var coverText: TextView? = null
@@ -61,14 +60,22 @@ class CarBrowser(
     private var nowArtist: TextView? = null
     private var coverControls: View? = null
     private var coverPlay: ImageButton? = null
-    private var sourceButton: ImageButton? = null
-    private var bar: View? = null
-    private var playButton: ImageButton? = null
-    private var timeText: TextView? = null
-    private var progressBar: ProgressBar? = null
+    private var navBox: LinearLayout? = null
+    private var menuButton: View? = null
+    private var placement = CarDisplay.NavPlacement.SIDE
+    private var navKey: Pair<Boolean, Boolean>? = null
+    private var headerView: View? = null
+    private var headerSource: TextView? = null
+    private var headerTitle: TextView? = null
+    private var railYouTube: ImageButton? = null
+    private var railMusic: ImageButton? = null
+    private var views: CarViews? = null
+    private var surfaceW = 0
+    private var surfaceH = 0
     private var playing = true
+    private var now = CarNowPlaying()
 
-    /** What the car shows: YouTube or YouTube Music (rail button; first one from the setting "Android Auto: opens with"). */
+    /** What the car shows: YouTube or YouTube Music (rail; first one from the setting "Android Auto: opens with"). */
     @Volatile var source: SiteApp = SiteApp.YOUTUBE
 
     /** Rail at the left edge (setting "Android Auto: controls on the left"); read when the surface is created. */
@@ -86,8 +93,9 @@ class CarBrowser(
         release()
         val dm = context.getSystemService(DisplayManager::class.java) ?: return
         val dpi = CarDisplay.optimalDpi(container.width, container.height, container.dpi)
+        val widthDp = CarDisplay.dp(container.width, dpi)
         describe = "car screen ${container.width}×${container.height} px, car dpi ${container.dpi} → $dpi " +
-            "(${CarDisplay.dp(container.width, dpi)}×${CarDisplay.dp(container.height, dpi)} dp)"
+            "($widthDp×${CarDisplay.dp(container.height, dpi)} dp), page edge to edge"
         val vd = dm.createVirtualDisplay(
             "StreamShell car",
             container.width,
@@ -100,48 +108,200 @@ class CarBrowser(
             return
         }
         log("surface available: $describe")
+        surfaceW = container.width
+        surfaceH = container.height
         display = vd
-        val p = Presentation(context, vd.display)
-        val c = p.context
-        val box = LinearLayout(c).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setBackgroundColor(BG)
+        // Dark theme: the page is told the screen prefers dark colours (YouTube follows it).
+        val p = Presentation(context, vd.display, android.R.style.Theme_DeviceDefault_NoActionBar)
+        val v = CarViews(p.context)
+        views = v
+        placement = CarDisplay.navPlacement(widthDp, CarDisplay.dp(container.height, dpi))
+        describe += ", navigation ${placement.name.lowercase()}"
+        val box = FrameLayout(p.context).apply { setBackgroundColor(CarTheme.BACKGROUND) }
+        val head = header(v)
+        // The page alone, edge to edge — no card, no gaps, no side panel (user, 2026-11-03).
+        val frame = pageFrame(v)
+        val nav = LinearLayout(p.context).apply {
+            orientation = if (placement == CarDisplay.NavPlacement.BOTTOM) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setBackgroundColor(CarTheme.BACKGROUND_2)
+            val pad = v.px(6)
+            setPadding(pad, pad, pad, pad)
         }
-        val column = LinearLayout(c).apply { orientation = LinearLayout.VERTICAL }
-        val frame = FrameLayout(c).apply { setBackgroundColor(Color.BLACK) }
-        frame.addView(engine.attach(PAGE_ID, c), FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        val cv = coverView(c)
-        frame.addView(cv, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        column.addView(frame, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        val b = playBar(c)
-        column.addView(b, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, px(c, CarDisplay.BAR_DP)))
-        val rail = rail(c)
-        val railParams = LinearLayout.LayoutParams(px(c, CarDisplay.RAIL_DP), ViewGroup.LayoutParams.MATCH_PARENT)
-        val columnParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
-        if (railLeft) {
-            box.addView(rail, railParams)
-            box.addView(column, columnParams)
-        } else {
-            box.addView(column, columnParams)
-            box.addView(rail, railParams)
+        navBox = nav
+        val match = ViewGroup.LayoutParams.MATCH_PARENT
+        val column = LinearLayout(p.context).apply { orientation = LinearLayout.VERTICAL }
+        column.addView(head, LinearLayout.LayoutParams(match, 0))
+        column.addView(frame, LinearLayout.LayoutParams(match, 0, 1f))
+        when (placement) {
+            CarDisplay.NavPlacement.SIDE -> {
+                val row = LinearLayout(p.context).apply { orientation = LinearLayout.HORIZONTAL }
+                val railParams = LinearLayout.LayoutParams(v.px(CarDisplay.RAIL_DP), match)
+                val colParams = LinearLayout.LayoutParams(0, match, 1f)
+                if (railLeft) {
+                    row.addView(nav, railParams)
+                    row.addView(column, colParams)
+                } else {
+                    row.addView(column, colParams)
+                    row.addView(nav, railParams)
+                }
+                box.addView(row, FrameLayout.LayoutParams(match, match))
+            }
+
+            CarDisplay.NavPlacement.BOTTOM -> {
+                column.addView(nav, LinearLayout.LayoutParams(match, v.px(CarDisplay.BAR_DP)))
+                box.addView(column, FrameLayout.LayoutParams(match, match))
+            }
+
+            CarDisplay.NavPlacement.MENU -> {
+                box.addView(column, FrameLayout.LayoutParams(match, match))
+                // One menu button over the page's corner; it opens the navigation as a panel over the page.
+                nav.background = v.glass(CarTheme.GLASS)
+                nav.visibility = View.GONE
+                val side = if (railLeft) Gravity.START else Gravity.END
+                box.addView(nav, FrameLayout.LayoutParams(v.px(CarDisplay.RAIL_DP), match, side or Gravity.BOTTOM))
+                val m = v.iconButton(R.drawable.ic_car_menu, "Menu", MENU_PAD) { nav.visibility = if (nav.visibility == View.VISIBLE) View.GONE else View.VISIBLE }
+                m.background = v.glass(CarTheme.ELEVATED, radiusDp = CarTheme.RADIUS_CONTROL)
+                val size = v.px(CarTheme.CONTROL_BUTTON)
+                box.addView(m, FrameLayout.LayoutParams(size, size, side or Gravity.BOTTOM).apply { setMargins(v.px(CarTheme.GAP), 0, v.px(CarTheme.GAP), v.px(CarTheme.GAP)) })
+                menuButton = m
+            }
         }
         p.setContentView(box)
         runCatching { p.show() }.onFailure { log("surface: presentation could not be shown (${it.javaClass.simpleName})") }
         presentation = p
         root = box
+        headerView = head
         pageFrame = frame
-        bar = b
+        navKey = null
+        updateNav()
         engine.setKeepVisible(PAGE_ID)
         refresh()
+        if (startWanted) start()
         main.removeCallbacks(tick)
         main.post(tick)
     }
 
+    /**
+     * Android Auto keeps a band at the top for its own buttons (top right). That band is StreamShell's header (left part);
+     * the rail runs the full height; only the other edges are padded (log of 2026-11-02: 132 px of 600).
+     */
     override fun onVisibleAreaChanged(visibleArea: Rect) {
-        // Android Auto draws its own buttons over the edges; rail, page and bar use the free area.
         val r = root ?: return
         log("visible area ${visibleArea.left},${visibleArea.top}–${visibleArea.right},${visibleArea.bottom}")
-        main.post { r.setPadding(visibleArea.left, visibleArea.top, (r.width - visibleArea.right).coerceAtLeast(0), (r.height - visibleArea.bottom).coerceAtLeast(0)) }
+        main.post {
+            val pad = CarDisplay.insets(surfaceW, surfaceH, visibleArea.left, visibleArea.top, visibleArea.right, visibleArea.bottom)
+            // Edge to edge: Android Auto's thin frame (18 px on the DS7) is not kept free, only real panels.
+            val edge = CarDisplay.edgeToEdge(pad, (CarDisplay.FRAME_DP * r.resources.displayMetrics.density).toInt())
+            r.setPadding(edge.left, 0, edge.right, edge.bottom)
+            headerView?.let { h ->
+                h.layoutParams = h.layoutParams.apply { height = pad.top }
+                h.visibility = if (pad.top > 0) View.VISIBLE else View.GONE
+            }
+        }
+    }
+
+    override fun onStableAreaChanged(stableArea: Rect) {
+        log("stable area ${stableArea.left},${stableArea.top}–${stableArea.right},${stableArea.bottom}")
+    }
+
+    /** Header in Android Auto's top band: wordmark, source tag, page title (left part; the right is Android Auto's). */
+    private fun header(v: CarViews): View = LinearLayout(v.context).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(v.px(4), 0, 0, 0)
+        visibility = View.GONE
+        addView(v.wordmark(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        val tag = v.chip("YouTube", CarTheme.TEXT_2)
+        addView(tag, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = v.px(CarTheme.GAP) })
+        val title = v.text(CarTheme.BODY_SP, CarTheme.TEXT_2).apply { setPadding(v.px(CarTheme.GAP), 0, v.px(8), 0) }
+        addView(title, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        // The right part of the band belongs to Android Auto's buttons.
+        addView(View(v.context), LinearLayout.LayoutParams(0, 1, CarDisplay.HEADER_FREE_WEIGHT))
+        headerSource = tag
+        headerTitle = title
+    }
+
+    /**
+     * Fills the navigation with the buttons for the current page ([CarDisplay.navItems]); rebuilt only when the page
+     * kind or the cover changes.
+     */
+    private fun updateNav() {
+        val nav = navBox ?: return
+        val v = views ?: return
+        val video = PageKind.isVideoPage(engine.pages.value[PAGE_ID]?.url)
+        val covered = !gate.videoAllowed
+        val key = video to covered
+        if (key == navKey) return
+        navKey = key
+        nav.removeAllViews()
+        railYouTube = null
+        railMusic = null
+        val horizontal = nav.orientation == LinearLayout.HORIZONTAL
+        CarDisplay.navItems(video, covered).forEach { item ->
+            val (icon, label) = iconOf(item)
+            val b = v.iconButton(icon, label, RAIL_PAD) {
+                if (placement == CarDisplay.NavPlacement.MENU) nav.visibility = View.GONE
+                perform(item)
+            }
+            v.setActive(b, false)
+            when (item) {
+                CarDisplay.NavItem.YOUTUBE -> railYouTube = b
+                CarDisplay.NavItem.MUSIC -> railMusic = b
+                else -> Unit
+            }
+            val lp = if (horizontal) {
+                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { setMargins(v.px(2), 0, v.px(2), 0) }
+            } else if (placement == CarDisplay.NavPlacement.MENU) {
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, v.px(CarTheme.CONTROL_BUTTON)).apply { setMargins(0, v.px(2), 0, v.px(2)) }
+            } else {
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { setMargins(0, v.px(2), 0, v.px(2)) }
+            }
+            nav.addView(b, lp)
+        }
+        showSource()
+        log("navigation (${placement.name.lowercase()}): " + CarDisplay.navItems(video, covered).joinToString(", ") { it.name.lowercase() })
+    }
+
+    private fun iconOf(item: CarDisplay.NavItem): Pair<Int, String> = when (item) {
+        CarDisplay.NavItem.HOME -> R.drawable.ic_car_home to "Home"
+        CarDisplay.NavItem.SEARCH -> R.drawable.ic_car_search to "Search"
+        CarDisplay.NavItem.BACK -> R.drawable.ic_car_back to "Back"
+        CarDisplay.NavItem.FORWARD -> R.drawable.ic_car_forward to "Forward"
+        CarDisplay.NavItem.YOUTUBE -> R.drawable.ic_car_youtube to "YouTube"
+        CarDisplay.NavItem.MUSIC -> R.drawable.ic_car_music to "YouTube Music"
+        CarDisplay.NavItem.LIBRARY -> R.drawable.ic_car_library to "Library"
+        CarDisplay.NavItem.SCROLL_UP -> R.drawable.ic_car_up to "Scroll up"
+        CarDisplay.NavItem.SCROLL_DOWN -> R.drawable.ic_car_down to "Scroll down"
+    }
+
+    private fun perform(item: CarDisplay.NavItem) = when (item) {
+        CarDisplay.NavItem.HOME -> home()
+        CarDisplay.NavItem.SEARCH -> onSearchRequested()
+        CarDisplay.NavItem.BACK -> back()
+        CarDisplay.NavItem.FORWARD -> forward()
+        CarDisplay.NavItem.YOUTUBE -> useSource(SiteApp.YOUTUBE)
+        CarDisplay.NavItem.MUSIC -> useSource(SiteApp.YOUTUBE_MUSIC)
+        CarDisplay.NavItem.LIBRARY -> library()
+        CarDisplay.NavItem.SCROLL_UP -> scroll(-1)
+        CarDisplay.NavItem.SCROLL_DOWN -> scroll(1)
+    }
+
+    /** The page, filling everything beside the navigation and under the header, with the cover for driving on top. */
+    private fun pageFrame(v: CarViews): FrameLayout = FrameLayout(v.context).apply {
+        setBackgroundColor(CarTheme.BACKGROUND)
+        addView(engine.attach(PAGE_ID, v.context, createInContext = true), FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        addView(coverView(v), FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+    }
+
+    private fun showSource() {
+        val v = views ?: return
+        railYouTube?.let { v.setActive(it, source == SiteApp.YOUTUBE) }
+        railMusic?.let { v.setActive(it, source == SiteApp.YOUTUBE_MUSIC, CarTheme.MUSIC_RED) }
+        headerSource?.apply {
+            text = source.title
+            setTextColor(if (source == SiteApp.YOUTUBE_MUSIC) CarTheme.MUSIC_RED else CarTheme.TEXT_2)
+        }
     }
 
     /**
@@ -157,46 +317,33 @@ class CarBrowser(
     private var ignoredTapLogged = false
 
     /**
-     * The cover while the picture may not show: a short message, what plays (title and artist from the page's media
-     * session — text only, no picture) and three large buttons: previous, play/pause, next. Sound controls only.
+     * The cover while the picture may not show: a short message and what plays (text only). Its own previous ·
+     * play/pause · next.
      */
-    private fun coverView(c: Context): View = LinearLayout(c).apply {
+    private fun coverView(v: CarViews): View = LinearLayout(v.context).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER
-        setBackgroundColor(Color.BLACK)
-        setPadding(px(c, 32), px(c, 24), px(c, 32), px(c, 24))
-        val msg = TextView(c).apply {
-            setTextColor(MUTED)
-            textSize = 16f
-            gravity = Gravity.CENTER
-        }
-        val title = TextView(c).apply {
-            setTextColor(Color.WHITE)
-            textSize = 26f
-            gravity = Gravity.CENTER
-            maxLines = 2
-            ellipsize = android.text.TextUtils.TruncateAt.END
-        }
-        val artist = TextView(c).apply {
-            setTextColor(MUTED)
-            textSize = 20f
-            gravity = Gravity.CENTER
-            maxLines = 1
-            ellipsize = android.text.TextUtils.TruncateAt.END
-        }
-        val row = LinearLayout(c).apply {
+        setBackgroundColor(CarTheme.BACKGROUND)
+        val p = v.px(28)
+        setPadding(p, p, p, p)
+        val msg = v.text(CarTheme.BODY_SP, CarTheme.MUTED, lines = 2).apply { gravity = Gravity.CENTER }
+        val title = v.text(COVER_TITLE_SP, CarTheme.TEXT, bold = true, lines = 2).apply { gravity = Gravity.CENTER }
+        val artist = v.text(CarTheme.TITLE_SP - 2f, CarTheme.TEXT_2).apply { gravity = Gravity.CENTER }
+        val row = LinearLayout(v.context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
-        val big = LinearLayout.LayoutParams(px(c, COVER_BUTTON_DP), px(c, COVER_BUTTON_DP)).apply { setMargins(px(c, 12), 0, px(c, 12), 0) }
-        row.addView(button(c, R.drawable.ic_car_prev, "Previous") { previous() }, big)
-        val play = button(c, R.drawable.ic_notif_pause, "Pause") { togglePlay() }
-        row.addView(play, LinearLayout.LayoutParams(big))
-        row.addView(button(c, R.drawable.ic_car_next, "Next") { next() }, LinearLayout.LayoutParams(big))
-        addView(msg, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = px(c, 16) })
-        addView(artist, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = px(c, 4) })
-        addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = px(c, 20) })
+        val side = LinearLayout.LayoutParams(v.px(CarTheme.CONTROL_BUTTON + 12), v.px(CarTheme.CONTROL_BUTTON + 12))
+        row.addView(v.iconButton(R.drawable.ic_car_prev, "Previous", COVER_PAD) { previous() }, side)
+        val play = v.playButton { togglePlay() }
+        row.addView(play, LinearLayout.LayoutParams(v.px(CarTheme.PLAY_BUTTON + 12), v.px(CarTheme.PLAY_BUTTON + 12)).apply { setMargins(v.px(16), 0, v.px(16), 0) })
+        row.addView(v.iconButton(R.drawable.ic_car_next, "Next", COVER_PAD) { next() }, LinearLayout.LayoutParams(side))
+        val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
+        val match = ViewGroup.LayoutParams.MATCH_PARENT
+        addView(msg, LinearLayout.LayoutParams(match, wrap))
+        addView(title, LinearLayout.LayoutParams(match, wrap).apply { topMargin = v.px(18) })
+        addView(artist, LinearLayout.LayoutParams(match, wrap).apply { topMargin = v.px(6) })
+        addView(row, LinearLayout.LayoutParams(wrap, wrap).apply { topMargin = v.px(22) })
         cover = this
         coverText = msg
         nowTitle = title
@@ -214,9 +361,10 @@ class CarBrowser(
             if (coverShown != show) {
                 coverShown = show
                 ignoredTapLogged = false
-                log(if (show) "cover on: picture hidden, page taps ignored; sound, rail and play bar unchanged" else "cover off: picture shown, page taps on")
+                log(if (show) "cover on: picture hidden, page taps ignored; sound, navigation and cover controls work" else "cover off: picture shown, page taps on")
             }
             c.visibility = if (show) View.VISIBLE else View.GONE
+            updateNav()
             msg.text = if (gate.needsConfirmation) {
                 "The picture shows only while the car is parked. Tap \"Parked\" when you have stopped."
             } else {
@@ -227,102 +375,47 @@ class CarBrowser(
 
     // ---------------------------------------------------------------- controls
 
-    private fun rail(c: Context): View = LinearLayout(c).apply {
-        orientation = LinearLayout.VERTICAL
-        gravity = Gravity.CENTER_HORIZONTAL
-        setBackgroundColor(BG)
-        setPadding(0, px(c, 8), 0, px(c, 8))
-        val src = button(c, sourceIcon(), sourceLabel()) { switchSource() }
-        sourceButton = src
-        addView(src, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        listOf<Triple<Int, String, () -> Unit>>(
-            Triple(R.drawable.ic_car_search, "Search") { onSearchRequested() },
-            Triple(R.drawable.ic_car_home, "Home") { home() },
-            Triple(R.drawable.ic_car_back, "Back") { back() },
-            Triple(R.drawable.ic_car_up, "Scroll up") { scroll(-1) },
-            Triple(R.drawable.ic_car_down, "Scroll down") { scroll(1) }
-        ).forEach { (icon, label, run) ->
-            addView(button(c, icon, label, run), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        }
-    }
-
-    private fun playBar(c: Context): View = LinearLayout(c).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        setBackgroundColor(BG)
-        setPadding(px(c, 12), 0, px(c, 16), 0)
-        visibility = View.GONE
-        val size = LinearLayout.LayoutParams(px(c, CarDisplay.BAR_DP - 8), ViewGroup.LayoutParams.MATCH_PARENT)
-        addView(button(c, R.drawable.ic_car_prev, "Previous") { previous() }, size)
-        addView(button(c, R.drawable.ic_notif_replay10, "Back 10 seconds") { engine.seekMedia(PAGE_ID, -SEEK_S) }, LinearLayout.LayoutParams(size))
-        val play = button(c, R.drawable.ic_notif_pause, "Pause") { togglePlay() }
-        addView(play, LinearLayout.LayoutParams(size))
-        addView(button(c, R.drawable.ic_notif_forward10, "Forward 10 seconds") { engine.seekMedia(PAGE_ID, SEEK_S) }, LinearLayout.LayoutParams(size))
-        addView(button(c, R.drawable.ic_car_next, "Next") { next() }, LinearLayout.LayoutParams(size))
-        val pb = ProgressBar(c, null, android.R.attr.progressBarStyleHorizontal).apply {
-            max = CarDisplay.PROGRESS_MAX
-            progressTintList = ColorStateList.valueOf(ACCENT)
-            progressBackgroundTintList = ColorStateList.valueOf(TRACK)
-            isClickable = false
-        }
-        addView(pb, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(px(c, 16), 0, px(c, 16), 0) })
-        val t = TextView(c).apply {
-            setTextColor(Color.WHITE)
-            textSize = 18f
-        }
-        addView(t, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        playButton = play
-        progressBar = pb
-        timeText = t
-    }
-
-    private fun button(c: Context, icon: Int, label: String, onTap: () -> Unit): ImageButton = ImageButton(c).apply {
-        setImageResource(icon)
-        imageTintList = ColorStateList.valueOf(Color.WHITE)
-        scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
-        val pad = px(c, 18)
-        setPadding(pad, pad, pad, pad)
-        contentDescription = label
-        val shape = GradientDrawable().apply {
-            cornerRadius = px(c, 18).toFloat()
-            setColor(Color.TRANSPARENT)
-        }
-        val mask = GradientDrawable().apply {
-            cornerRadius = px(c, 18).toFloat()
-            setColor(Color.WHITE)
-        }
-        background = RippleDrawable(ColorStateList.valueOf(PRESSED), shape, mask)
-        setOnClickListener { onTap() }
-    }
-
-    /** Every second while the car screen shows: play bar on video pages, its time, progress and play/pause icon. */
+    /**
+     * Every second while the car screen shows: what plays (the page's media session, else the page title), position,
+     * play state and the video's picture; the car style for YouTube's page. Nothing is shown that the page does not say.
+     */
     private val tick = object : Runnable {
         override fun run() {
             if (root == null) return
-            val video = PageKind.isVideoPage(engine.pages.value[PAGE_ID]?.url)
-            bar?.visibility = if (video) View.VISIBLE else View.GONE
-            if (cover?.visibility == View.VISIBLE) {
-                engine.nowPlaying(PAGE_ID) { np ->
-                    nowTitle?.text = np?.first ?: "Nothing playing"
-                    nowArtist?.text = np?.second.orEmpty()
-                }
-                engine.probeMedia(PAGE_ID) { st -> showPlaying(st == MediaState.PLAYING) }
+            val page = engine.pages.value[PAGE_ID]
+            val url = page?.url
+            val video = PageKind.isVideoPage(url)
+            headerTitle?.text = page?.title?.removeSuffix(" - YouTube")?.removeSuffix(" - YouTube Music").orEmpty()
+            if (com.streamshell.core.browser.YouTubeSite.isYouTube(com.streamshell.core.browser.UrlHosts.hostOf(url))) engine.run(PAGE_ID, CarDisplay.PAGE_STYLE)
+            updateNav()
+            val music = com.streamshell.core.browser.MusicSite.isMusic(com.streamshell.core.browser.UrlHosts.hostOf(url))
+            val id = com.streamshell.core.sponsor.SponsorBlockApi.videoIdOf(url)
+            engine.nowPlaying(PAGE_ID) { np ->
+                now = now.copy(
+                    title = np?.first ?: if (video) headerTitle?.text?.toString().orEmpty() else "",
+                    artist = np?.second.orEmpty(),
+                    videoId = id,
+                    music = music
+                )
+                render()
             }
-            if (video) {
-                engine.run(PAGE_ID, PlayerScripts.POSITION) { r ->
-                    val p = PlayerScripts.parsePositionAndId(r)
-                    progressBar?.progress = p?.let { CarDisplay.progress(it.first, it.second) } ?: 0
-                    timeText?.text = p?.let { CarDisplay.clock(it.first) + " / " + CarDisplay.clock(it.second) }.orEmpty()
-                }
-                engine.probeMedia(PAGE_ID) { st -> showPlaying(st == MediaState.PLAYING) }
+            engine.probeMedia(PAGE_ID) { st ->
+                now = now.copy(playing = st == MediaState.PLAYING)
+                showPlaying(now.playing)
+                render()
             }
             main.postDelayed(this, TICK_MS)
         }
     }
 
+    private fun render() {
+        nowTitle?.text = now.title.ifEmpty { "Nothing playing" }
+        nowArtist?.text = now.artist
+    }
+
     private fun showPlaying(now: Boolean) {
         playing = now
-        listOfNotNull(playButton, coverPlay).forEach { b ->
+        listOfNotNull(coverPlay).forEach { b ->
             b.setImageResource(if (now) R.drawable.ic_notif_pause else R.drawable.ic_notif_play)
             b.contentDescription = if (now) "Pause" else "Play"
         }
@@ -333,8 +426,9 @@ class CarBrowser(
     override fun onClick(x: Float, y: Float) {
         val r = root ?: return
         main.post {
-            // While the picture is covered, taps on the page are ignored; rail and play bar still work.
-            if (!gate.videoAllowed && inside(pageFrame, r, x, y) && !inside(coverControls, r, x, y)) {
+            // While the picture is covered, taps on the page are ignored; navigation and the cover's controls still work.
+            val onNav = navBox?.takeIf { it.visibility == View.VISIBLE }?.let { inside(it, r, x, y) } == true || inside(menuButton, r, x, y)
+            if (!gate.videoAllowed && inside(pageFrame, r, x, y) && !inside(coverControls, r, x, y) && !onNav) {
                 if (!ignoredTapLogged) log("tap on the covered page ignored (further ones not logged until the cover changes)")
                 ignoredTapLogged = true
                 return@post
@@ -403,20 +497,26 @@ class CarBrowser(
     fun next() = engine.mediaAction(PAGE_ID, com.streamshell.core.browser.MediaSessionScripts.NEXT) { how -> log("next track ($how)") }
     fun previous() = engine.mediaAction(PAGE_ID, com.streamshell.core.browser.MediaSessionScripts.PREVIOUS) { how -> log("previous track ($how)") }
 
-    /** YouTube ⇄ YouTube Music: the other one's home page opens in the car's page (one page, one sound). */
-    fun switchSource() {
-        source = if (source == SiteApp.YOUTUBE) SiteApp.YOUTUBE_MUSIC else SiteApp.YOUTUBE
-        log("source: ${source.title}")
-        sourceButton?.apply {
-            setImageResource(sourceIcon())
-            contentDescription = sourceLabel()
+    /** YouTube or YouTube Music: its home page opens in the car's page (one page, one sound). */
+    fun useSource(s: SiteApp) {
+        if (s == source) {
+            home()
+            return
         }
+        source = s
+        log("source: ${source.title}")
+        showSource()
         home()
     }
 
-    private fun sourceIcon() = if (source == SiteApp.YOUTUBE) R.drawable.ic_car_music else R.drawable.ic_car_youtube
-    private fun sourceLabel() = if (source == SiteApp.YOUTUBE) "Switch to YouTube Music" else "Switch to YouTube"
+    /** The source's library (YouTube: You / library; YouTube Music: Library). */
+    fun library() {
+        val dest = source.destinations.firstOrNull { it.id == "library" || it.id == "you" } ?: return
+        engine.load(PAGE_ID, dest.url)
+    }
+
     fun back() = engine.goBack(PAGE_ID)
+    fun forward() = engine.goForward(PAGE_ID)
     fun scroll(direction: Int) {
         if (gate.videoAllowed) engine.run(PAGE_ID, CarDisplay.scrollScript(direction))
     }
@@ -437,10 +537,18 @@ class CarBrowser(
     val isPlaying get() = playing
 
     private var started = false
+    private var startWanted = false
+
+    /**
+     * Opens the source's home page — but only once the car screen's surface exists: the page's WebView must be created
+     * with the car screen's context to get the car screen's density (see [BrowserEngine.attach]).
+     */
     fun start() {
-        if (!started) {
+        startWanted = true
+        if (!started && presentation != null) {
             started = true
             engine.load(PAGE_ID, homeOf(source))
+            log("page created for the car screen (${presentation?.context?.resources?.displayMetrics?.densityDpi} dpi)")
         }
     }
 
@@ -462,14 +570,16 @@ class CarBrowser(
         nowArtist = null
         coverControls = null
         coverPlay = null
-        sourceButton = null
-        bar = null
-        playButton = null
-        timeText = null
-        progressBar = null
+        headerView = null
+        headerSource = null
+        headerTitle = null
+        railYouTube = null
+        railMusic = null
+        views = null
+        navBox = null
+        menuButton = null
+        navKey = null
     }
-
-    private fun px(c: Context, dp: Int): Int = (dp * c.resources.displayMetrics.density + 0.5f).toInt()
 
     companion object {
         const val PAGE_ID = 1L
@@ -477,13 +587,23 @@ class CarBrowser(
         const val MUSIC_HOME = "https://music.youtube.com/"
 
         fun homeOf(source: SiteApp) = if (source == SiteApp.YOUTUBE_MUSIC) MUSIC_HOME else HOME
-        private const val COVER_BUTTON_DP = 88
-        private const val MUTED = 0xFFB0B0B0.toInt()
-        private const val SEEK_S = 10
         private const val TICK_MS = 1000L
-        private const val BG = 0xFF121212.toInt()
-        private const val ACCENT = 0xFF4C8DFF.toInt()
-        private const val TRACK = 0x40FFFFFF
-        private const val PRESSED = 0x33FFFFFF
+        private const val RAIL_PAD = 14
+        private const val MENU_PAD = 16
+        private const val COVER_PAD = 18
+        private const val COVER_TITLE_SP = 24f
     }
+}
+
+/** What plays in the car's page (built from the page's own state every second; nothing is invented). */
+data class CarNowPlaying(
+    val title: String = "",
+    val artist: String = "",
+    val videoId: String? = null,
+    val position: Double = Double.NaN,
+    val duration: Double = Double.NaN,
+    val playing: Boolean = false,
+    val music: Boolean = false
+) {
+    val hasMedia get() = title.isNotEmpty() || videoId != null
 }

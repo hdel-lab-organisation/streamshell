@@ -106,7 +106,10 @@ object MediaPolicy {
     }
 
     /** Auto picture-in-picture only while something is actually playing (or a video is fullscreen). */
-    fun shouldAutoPip(autoPipEnabled: Boolean, supported: Boolean, fullscreenVideo: Boolean, media: MediaState): Boolean = autoPipEnabled && supported && (fullscreenVideo || media == MediaState.PLAYING)
+    fun shouldAutoPip(autoPipEnabled: Boolean, supported: Boolean, fullscreenVideo: Boolean, media: MediaState, music: Boolean = false): Boolean = autoPipEnabled && supported && !music && (fullscreenVideo || media == MediaState.PLAYING)
+
+    /** YouTube Music plays (from the playing page's address): no picture-in-picture, the sound continues in the background. */
+    fun playingMusic(): Boolean = com.streamshell.core.browser.MusicSite.isMusic(com.streamshell.core.browser.UrlHosts.hostOf(MediaBridge.pageUrl))
 
     /** The media notification/service runs while media plays and background playback is on. */
     fun wantsPlaybackService(backgroundEnabled: Boolean, media: MediaState, serviceRunning: Boolean): Boolean = when {
@@ -188,7 +191,8 @@ object MediaBridge {
     @Volatile var seekSeconds: Int = PlaybackService.SEEK_SECONDS
 
     /** YouTube's still picture for the playing video, or null for other sites. */
-    fun thumbnailUrl(): String? = com.streamshell.core.sponsor.SponsorBlockApi.videoIdOf(pageUrl)?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }
+    fun thumbnailUrl(): String? = (com.streamshell.core.sponsor.SponsorBlockApi.videoIdOf(pageUrl) ?: com.streamshell.core.browser.MusicSite.playerVideoId(pageUrl))
+        ?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }
 
     /** Bumped on every change so the notification can refresh. */
     @Volatile var listener: (() -> Unit)? = null

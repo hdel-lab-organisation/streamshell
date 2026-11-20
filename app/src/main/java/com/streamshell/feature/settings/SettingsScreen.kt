@@ -62,6 +62,7 @@ import com.streamshell.designsystem.ambientBackground
 data class SettingsActions(
     val onUpdate: ((AppSettings) -> AppSettings) -> Unit = {},
     val onOpenPrivacy: () -> Unit = {},
+    val onOpenNotifications: () -> Unit = {},
     val onResetSettings: () -> Unit = {},
     val onOpenExternal: (String) -> Unit = {},
     val onClearData: (history: Boolean, cookies: Boolean, cache: Boolean) -> Unit = { _, _, _ -> },
@@ -219,6 +220,12 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions, onClose: ()
                     if (shows(SettingsSearch.FEED)) {
                         item {
                             GlassPanel(title = "Feed") {
+                                ActionRow(
+                                    "Notifications",
+                                    (if (s.notifyEnabled) "On" else "Off") + " · new videos, live streams and scheduled streams of your subscriptions, checked every ${s.notifyIntervalMin} min. Channels, favourites, sync and history.",
+                                    "open-notifications"
+                                ) { actions.onOpenNotifications() }
+                                GlassDivider()
                                 SwitchRow(
                                     "Feed previews",
                                     "Muted previews of videos in YouTube's feed. Off: the feed loads no video at all (only pictures) — less data and battery, and a scroll can never open a video by itself.",
@@ -446,7 +453,7 @@ private fun AppearanceSelector(current: ThemeMode, onSelect: (ThemeMode) -> Unit
 }
 
 @Composable
-private fun SwitchRow(title: String, subtitle: String?, checked: Boolean, tag: String? = null, onChange: (Boolean) -> Unit) {
+internal fun SwitchRow(title: String, subtitle: String?, checked: Boolean, tag: String? = null, onChange: (Boolean) -> Unit) {
     val c = StreamTheme.colors
     ListItem(
         headlineContent = { Text(title, style = MaterialTheme.typography.bodyLarge) },
@@ -471,7 +478,7 @@ private fun SwitchRow(title: String, subtitle: String?, checked: Boolean, tag: S
 }
 
 @Composable
-private fun ActionRow(title: String, subtitle: String?, tag: String, onClick: () -> Unit) {
+internal fun ActionRow(title: String, subtitle: String?, tag: String, onClick: () -> Unit) {
     ListItem(
         headlineContent = { Text(title, style = MaterialTheme.typography.bodyLarge) },
         supportingContent = subtitle?.let { { Text(it, style = MaterialTheme.typography.bodySmall, color = StreamTheme.colors.textSecondary) } },
@@ -575,7 +582,7 @@ object SettingsSearch {
     const val START = "start page open instance youtube music"
     const val PLAYBACK = "playback background picture-in-picture pip resume continue jump seek double-tap quality wifi mobile swipe brightness volume audio boost loudness " +
         "break reminder leave player mini close action row captions subtitles language android auto car rail left right music source calls navigation radar voice duck audio"
-    const val FEED = "feed previews shorts watched hide blocked channels words keywords posts playables filter"
+    const val FEED = "feed previews shorts watched hide blocked channels words keywords posts playables filter new video notifications live streams upcoming subscriptions bell favourites sync"
     const val YOUTUBE = "youtube app mode autoplay minimize refresh ads sponsorblock segments timeline dislikes dearrow titles diagnostics log trace everything admin logging button"
     const val PRIVACY = "adblock privacy trackers filter lists"
     const val BACKUP = "backup restore file export import json"
@@ -689,7 +696,7 @@ private fun WordListRow(title: String, help: String, tag: String, words: Set<Str
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun <T> ChipRow(title: String, tag: String, options: List<Pair<T, String>>, current: T, onSelect: (T) -> Unit) {
+internal fun <T> ChipRow(title: String, tag: String, options: List<Pair<T, String>>, current: T, onSelect: (T) -> Unit) {
     Column(Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm)) {
         Text(title, style = MaterialTheme.typography.bodyLarge)
         androidx.compose.foundation.layout.FlowRow(

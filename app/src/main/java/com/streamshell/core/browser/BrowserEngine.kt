@@ -368,9 +368,9 @@ class BrowserEngine(
 
     private fun page(id: Long, f: (PageState) -> PageState) = _pages.update { m -> m + (id to f(m[id] ?: PageState())) }
 
-    private fun tab(id: Long): Tab {
+    private fun tab(id: Long, base: Context = appContext): Tab {
         tabs[id]?.let { return it }
-        val wrapper = MutableContextWrapper(appContext)
+        val wrapper = MutableContextWrapper(base)
         val t = Tab(id, createWebView(id, wrapper), wrapper)
         tabs[id] = t
         page(id) { it }
@@ -379,9 +379,12 @@ class BrowserEngine(
 
     fun hasView(id: Long) = tabs.containsKey(id)
 
-    /** The tab's WebView, re-parented into the Activity's window. */
-    fun attach(id: Long, activityContext: Context): View {
-        val t = tab(id)
+    /**
+     * The tab's WebView, re-parented into the Activity's window. [createInContext]: a new page is created with [activityContext] itself (0.6.5, the car screen): WebView takes its
+     * density from the context it is created with, so a car page made with the app's context was about twice too large.
+     */
+    fun attach(id: Long, activityContext: Context, createInContext: Boolean = false): View {
+        val t = tab(id, if (createInContext) activityContext else appContext)
         t.wrapper.baseContext = activityContext
         // The visible page rasterises a little beyond the screen (smoother scrolling and moving); others save memory.
         runCatching { t.view.settings.offscreenPreRaster = true }
@@ -489,6 +492,7 @@ class BrowserEngine(
             return
         }
         val q = org.json.JSONObject.quote(url)
+        val gen = openGeneration.get()
         view.evaluateJavascript(
             "(function(u){try{var t=new URL(u);history.pushState({},'',t.pathname+t.search);" +
                 "window.dispatchEvent(new PopStateEvent('popstate',{state:{}}));return 'ok';}catch(e){return 'no';}})($q)"
@@ -499,7 +503,7 @@ class BrowserEngine(
                 return@evaluateJavascript
             }
             view.postDelayed({
-                if (tabs[id]?.view !== view) return@postDelayed
+                if (tabs[id]?.view !== view || openGeneration.get() != gen) return@postDelayed
                 view.evaluateJavascript(PlayerOpen.CHECK) { raw ->
                     val c = PlayerOpen.parse(raw)
                     val state = PlayerOpen.stateName(c.state)
@@ -519,6 +523,13 @@ class BrowserEngine(
                 }
             }, 2500)
         }
+    }
+
+    private val openGeneration = java.util.concurrent.atomic.AtomicInteger()
+
+    /** Drops every pending "player still on the old video → load the page" check (mini player closed, 0.7.1). */
+    fun cancelPendingOpens() {
+        openGeneration.incrementAndGet()
     }
 
     /** Loads a YouTube [url] in place of the current page history entry (no Back to the old page). */

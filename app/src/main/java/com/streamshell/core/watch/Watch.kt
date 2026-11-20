@@ -45,7 +45,9 @@ data class WatchData(
     /** Remembered playback speed per channel (channel name in lower case → percent). */
     val channelSpeeds: Map<String, Int> = emptyMap(),
     /** Seconds watched per channel (channel name as YouTube shows it). */
-    val channelStats: Map<String, Long> = emptyMap()
+    val channelStats: Map<String, Long> = emptyMap(),
+    /** Channels whose bell is off: no new-video notifications (0.6.7). */
+    val muted: Set<String> = emptySet()
 )
 
 data class Playlist(val name: String, val items: List<WatchLaterItem> = emptyList())
@@ -368,7 +370,8 @@ object WatchSerializer {
             }
         }.toString(),
         "speeds" to JSONObject().also { o -> d.channelSpeeds.forEach { (k, v) -> o.put(k, v) } }.toString(),
-        "chstats" to JSONObject().also { o -> d.channelStats.forEach { (k, v) -> o.put(k, v) } }.toString()
+        "chstats" to JSONObject().also { o -> d.channelStats.forEach { (k, v) -> o.put(k, v) } }.toString(),
+        "muted" to JSONArray(d.muted.toList()).toString()
     )
 
     fun decode(raw: (String) -> String?): WatchData = WatchData(
@@ -397,7 +400,10 @@ object WatchSerializer {
             Playlist(name, items)
         }.distinctBy { it.name.lowercase() }.take(Playlists.MAX_LISTS),
         channelSpeeds = obj(raw("speeds")).let { o -> o.keys().asSequence().mapNotNull { k -> ChannelRules.keyOf(k)?.let { it to o.optInt(k, 100).coerceIn(50, 200) } }.take(ChannelRules.MAX_SPEEDS).toMap() },
-        channelStats = obj(raw("chstats")).let { o -> o.keys().asSequence().map { it.take(100) to o.optLong(it).coerceAtLeast(0) }.take(ChannelRules.MAX_STATS).toMap() }
+        channelStats = obj(raw("chstats")).let { o -> o.keys().asSequence().map { it.take(100) to o.optLong(it).coerceAtLeast(0) }.take(ChannelRules.MAX_STATS).toMap() },
+        muted = runCatching { JSONArray(raw("muted") ?: "[]") }.getOrDefault(JSONArray()).let { a ->
+            (0 until minOf(a.length(), WatchRules.MAX_CHANNELS)).map { a.optString(it) }.filter { it.startsWith("UC") }.toSet()
+        }
     )
 
     private fun obj(raw: String?): JSONObject = runCatching { JSONObject(raw ?: "{}") }.getOrDefault(JSONObject())

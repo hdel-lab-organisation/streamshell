@@ -290,6 +290,17 @@ fun SubscriptionsPanel(state: BrowserUiState, actions: BrowserActions) {
                                     Text(ch.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     com.streamshell.core.watch.ChannelGroups.groupOf(groups, ch.id)?.let { g -> Text(g, style = MaterialTheme.typography.bodySmall, color = StreamTheme.colors.textSecondary, maxLines = 1) }
                                 }
+                                // Bell: new-video notifications for this channel (0.6.7), like the YouTube app.
+                                val bellOn = state.settings.notifyEnabled && ch.id !in state.watch.muted
+                                GlassIconButton(
+                                    if (bellOn) StreamIcons.BellOn else StreamIcons.BellOff,
+                                    if (bellOn) "New video notifications for ${ch.title}: on" else "New video notifications for ${ch.title}: off",
+                                    { actions.onToggleChannelBell(ch.id) },
+                                    Modifier.testTag("channel-bell"),
+                                    size = 32.dp,
+                                    iconSize = 16.dp,
+                                    glass = false
+                                )
                                 GlassIconButton(StreamIcons.Group, "Group for ${ch.title}", { groupFor = ch }, Modifier.testTag("channel-group"), size = 32.dp, iconSize = 16.dp, glass = false)
                                 GlassIconButton(StreamIcons.Close, "Remove channel", { actions.onRemoveChannel(ch.id) }, size = 32.dp, iconSize = 16.dp, glass = false)
                             }

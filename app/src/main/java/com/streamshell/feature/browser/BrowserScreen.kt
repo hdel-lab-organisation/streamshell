@@ -164,6 +164,8 @@ data class BrowserActions(
     val onRefreshFeed: () -> Unit = {},
     val onOpenChannel: (com.streamshell.core.watch.Channel) -> Unit = {},
     val onRemoveChannel: (String) -> Unit = {},
+    /** Bell of a channel: new-video notifications on / off (0.6.7). */
+    val onToggleChannelBell: (String) -> Unit = {},
     /** Jump the playing video to a second (chapters). */
     val onSeekTo: (Int) -> Unit = {},
     /** Current position of the playing video in seconds (asynchronous). */
@@ -230,7 +232,8 @@ fun BrowserScreen(
     settingsContent: @Composable (onClose: () -> Unit) -> Unit,
     privacyContent: @Composable (onClose: () -> Unit) -> Unit,
     modifier: Modifier = Modifier,
-    diagnosticsContent: @Composable (onClose: () -> Unit) -> Unit = {}
+    diagnosticsContent: @Composable (onClose: () -> Unit) -> Unit = {},
+    notificationsContent: @Composable (onClose: () -> Unit) -> Unit = {}
 ) {
     Surface(modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background, contentColor = MaterialTheme.colorScheme.onBackground) {
         val startGlow = state.showingStart && !chrome.inPip
@@ -284,7 +287,7 @@ fun BrowserScreen(
                     if (siteApp != null) {
                         com.streamshell.designsystem.PageToned(state.page.background.takeUnless { state.showingStart }) {
                             // On an open YouTube video (not the mini player) the bar slides: sections and player actions in one row.
-                            val playerBar = state.settings.playerActionRow && (state.onYouTube || state.onMusic) && state.isVideoPage && state.miniTabId != state.active.id
+                            val playerBar = state.settings.playerActionRow && ((state.onYouTube && state.isVideoPage) || state.isMusicPlayer) && state.miniTabId != state.active.id
                             SiteAppBar(siteApp, siteApp.destinationOf(state.currentUrl), state, actions, chrome, playerBar) { browserBarsOnSite = true }
                         }
                     } else if (compact) {
@@ -321,6 +324,7 @@ fun BrowserScreen(
                         Overlay.History -> HistoryPanel(state, actions)
                         Overlay.Settings -> OverlaySurface("overlay-settings") { settingsContent { actions.onNav(NavAction.CloseOverlay) } }
                         Overlay.Privacy -> OverlaySurface("overlay-privacy") { privacyContent { actions.onNav(NavAction.CloseOverlay) } }
+                        Overlay.Notifications -> OverlaySurface("overlay-notifications") { notificationsContent { actions.onNav(NavAction.CloseOverlay) } }
                         Overlay.WatchLater -> WatchLaterPanel(state, actions)
                         Overlay.Subscriptions -> SubscriptionsPanel(state, actions)
                         Overlay.WatchTime -> WatchTimePanel(state, actions)
@@ -1256,21 +1260,30 @@ private fun SheetItem(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
  */
 private fun Modifier.pageGestures(
     video: com.streamshell.core.media.VideoRect?,
+    music: Boolean,
+    videoPage: Boolean,
     minimize: Boolean,
     refresh: Boolean,
     atTop: () -> Boolean,
     onMinimize: () -> Unit,
     onPull: (Float) -> Unit,
     onRefresh: () -> Unit
-): Modifier = this.pointerInput(video, minimize, refresh) {
+): Modifier = this.pointerInput(video, music, videoPage, minimize, refresh) {
     val threshold = 96.dp.toPx()
     val pullDistance = 120.dp.toPx()
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
         val y0 = down.position.y
-        val onVideo = if (video != null) y0 >= video.top && y0 <= video.top + video.height else y0 <= size.height * 0.4f
+        // YouTube Music: the picture and the title area (the upper three quarters), so a swipe down over the middle works.
+        val onVideo = when {
+            video != null -> y0 >= video.top && y0 <= video.top + video.height
+            music -> y0 <= size.height * MUSIC_SWIPE_AREA
+            else -> y0 <= size.height * 0.4f
+        }
+        // YouTube video page scrolled to the top: the upper half counts as the player too — after scrolling, the
+        // player's reported position could be out of date and the swipe reloaded the page (0.7.1, log 07:22:10).
         val mode = when {
-            minimize && onVideo -> 1
+            minimize && (onVideo || (videoPage && y0 <= size.height * VIDEO_SWIPE_AREA && atTop())) -> 1
             refresh && atTop() -> 2
             else -> return@awaitEachGesture
         }
@@ -1541,11 +1554,12 @@ private fun androidx.compose.foundation.layout.BoxScope.TabSlot(
     // With YouTube's description/comments panel open, swiping is for the panel: no pull to refresh, and minimize
     // only from the video itself.
     val panelOpen = isActive && state.page.panelOpen
-    val swipe = isActive && !isMini && !chrome.inPip && state.settings.swipeToMinimize && (!panelOpen || video != null) && state.canMinimize && state.media != com.streamshell.core.media.MediaState.NONE
+    val swipe = isActive && !isMini && !chrome.inPip && state.settings.swipeToMinimize && (!panelOpen || video != null) &&
+        (state.canMinimize || state.isMusicPlayer) && state.media != com.streamshell.core.media.MediaState.NONE
     // 0.6.4: not on YouTube Music's player page — a swipe down there is for the mini player (it reloaded the page and
     // YouTube Music asked "leave this page?").
     val pullRefresh = !isMini && !chrome.inPip && tabId == state.active.id && !state.showingStart && state.settings.pullToRefresh && !state.page.panelOpen &&
-        !(state.onMusic && state.isVideoPage)
+        !state.isMusicPlayer && !state.isVideoPage // 0.7.1: no reload on YouTube video pages and Shorts (swipe = minimize / previous Short)
     var pull by remember { mutableStateOf(0f) }
     var refreshing by remember { mutableStateOf(false) }
     if (refreshing && !state.page.loading) {
@@ -1584,7 +1598,7 @@ private fun androidx.compose.foundation.layout.BoxScope.TabSlot(
     val doubleTap = isActive && !isMini && !chrome.inPip && state.settings.doubleTapSeek && state.siteApp == null && !state.onYouTube &&
         state.media != com.streamshell.core.media.MediaState.NONE && video != null
     // YouTube Music: swipe sideways over the player for the next / previous track (like Spotify).
-    val trackSwipe = isActive && !isMini && !chrome.inPip && state.onMusic && state.isVideoPage
+    val trackSwipe = isActive && !isMini && !chrome.inPip && state.isMusicPlayer
     var seekFlash by remember { mutableStateOf<Pair<Boolean, Long>?>(null) }
     Box(
         Modifier.fillMaxSize()
@@ -1601,6 +1615,8 @@ private fun androidx.compose.foundation.layout.BoxScope.TabSlot(
                     Modifier.pageGestures(
                         // YouTube Music plays songs in a hidden or tiny video element: its player is the top of the page.
                         if (state.onMusic) null else video?.takeIf { it.width > 1f && it.height > 1f },
+                        music = state.onMusic,
+                        videoPage = state.onYouTube && state.isVideoPage && !state.isShortsPage,
                         minimize = swipe,
                         refresh = pullRefresh,
                         atTop = { actions.isPageAtTop(tabId) },
@@ -2264,3 +2280,9 @@ private fun LoadingPagePlaceholder() {
 
 private const val LOADING_CHIPS = 3
 private const val LOADING_CARDS = 2
+
+/** YouTube Music player page: share of the height (from the top) where a swipe down collapses the player. */
+private const val MUSIC_SWIPE_AREA = 0.75f
+
+/** YouTube video page at its top: share of the height (from the top) where a swipe down minimizes. */
+private const val VIDEO_SWIPE_AREA = 0.5f

@@ -237,3 +237,22 @@ Nothing here has been run on a device yet: the build machine has no emulator (no
 | 223 | Mini player | No previous/play/next/time/fullscreen of YouTube in the picture; mini play/pause and X work |
 | 224 | YouTube Music: song open, swipe down from the picture | Mini player, no reload, no "leave this page?" dialog |
 | 225 | YouTube Music: free account with an ad | Ad skipped or jumped (log `ads: …`) |
+| 237 | Settings › Feed › Notifications | Master switch, 4 categories (Community greyed: not available), interval chips, favourites only, status, channels, history |
+| 238 | "Sync now" while signed in (diagnostics on) | Log `subscriptions: N channels … complete` or `partial`; status line shows it; channels list filled |
+| 239 | A subscribed channel schedules a live stream | "Upcoming live stream" notification (low priority) with the start time |
+| 240 | That stream starts | "Live now" notification (high priority) within one interval after the start |
+| 241 | Star a channel, turn on "Favourites only" | Only starred channels notify |
+| 242 | Revoke the notification permission | The screen shows "Notifications are not allowed"; tapping opens Android's settings |
+| 243 | Interval 15 min | WorkManager job rescheduled (Android may still delay it) |
+| 244 | Car (DS7): open StreamShell | Rail at the side; feed: Home, Search, Back, YouTube, Music, Library, up, down; no play bar |
+| 245 | Car: open a video (parked) | Rail: Back, Home, Forward, YouTube, Music; YouTube's own player controls |
+| 246 | Car: drive off | Cover; rail: Home, YouTube, Music only; cover previous/play/next work; page taps ignored |
+| 247 | Notifications › Android › Send test notification | Notification appears, or the screen says why not |
+| 248 | Battery optimization row → Allow | Row shows "Runs in the background"; checks continue with the app closed (watch "Last check") |
+| 249 | Upload in a subscribed channel, app closed | Notification within ~1 interval; "Last check" shows "shown 1" |
+| 250 | Short in the feed, swipe down | Previous Short (no mini player, no reload, no new tab) |
+| 251 | Mini player X | Video does not come back |
+| 252 | Video page at the top, swipe down in the upper half | Mini player, no reload |
+| 253 | YouTube Music player, swipe down | Music's own player bar, song continues, no reload; no PiP when leaving the app |
+| 254 | Media notification on Music / YouTube | Song/video picture; X closes the app (Android 13+) |
+

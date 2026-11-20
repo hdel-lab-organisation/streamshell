@@ -1,6 +1,8 @@
 package com.streamshell
 
 import android.app.Application
+import com.streamshell.core.notify.NotificationScheduler
+import com.streamshell.core.notify.notifyPrefs
 import com.streamshell.core.privacy.FilterListRepository
 import com.streamshell.core.privacy.FilterUpdateScheduler
 import com.streamshell.core.settings.SettingsRepository
@@ -26,6 +28,12 @@ class StreamShellApp : Application() {
         com.streamshell.core.diag.CrashReport.install(this)
         // Offline-safe: builds the engine from the built-in list and CACHED lists only; no network here.
         scope.launch { filterLists.initialize() }
+        scope.launch {
+            // Notification Engine (0.7.0): rescheduled when the master switch or the interval changes.
+            settings.settings.map { it.notifyPrefs() to it.notifyIntervalMin }.distinctUntilChanged().collect { (prefs, interval) ->
+                runCatching { NotificationScheduler.apply(this@StreamShellApp, prefs, interval) }
+            }
+        }
         scope.launch {
             settings.settings.map { it.updateIntervalHours }.distinctUntilChanged().collect {
                 // A scheduling problem must never take the app down; lists simply stay as they are.

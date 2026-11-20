@@ -18,14 +18,15 @@ object NavReducer {
         is NavAction.Open -> when {
             action.overlay == Overlay.None -> NavState()
 
-            // Privacy can be reached from Settings or from the page shield; it returns to where it came from.
-            action.overlay == Overlay.Privacy -> NavState(Overlay.Privacy, returnTo = state.overlay.takeIf { it != Overlay.Privacy } ?: state.returnTo)
+            // Privacy (Settings or the page shield) and Notifications (Settings) return to where they came from.
+            action.overlay == Overlay.Privacy || action.overlay == Overlay.Notifications ->
+                NavState(action.overlay, returnTo = state.overlay.takeIf { it != Overlay.Privacy && it != Overlay.Notifications } ?: state.returnTo)
 
             else -> NavState(action.overlay)
         }
 
         NavAction.CloseOverlay -> when (state.overlay) {
-            Overlay.Privacy -> NavState(state.returnTo)
+            Overlay.Privacy, Overlay.Notifications -> NavState(state.returnTo)
             else -> NavState()
         }
     }

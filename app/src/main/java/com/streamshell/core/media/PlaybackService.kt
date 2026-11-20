@@ -69,6 +69,12 @@ class PlaybackService : Service() {
                 override fun onSkipToNext() {
                     MediaBridge.controls?.track(true)
                 }
+
+                // Android 13+ builds the media controls from the session, not from the notification's buttons: the X
+                // ("Exit") must be a custom action of the session to appear there (0.7.1).
+                override fun onCustomAction(action: String, extras: android.os.Bundle?) {
+                    if (action == ACTION_EXIT) exitApp()
+                }
             })
             isActive = true
         }
@@ -97,11 +103,7 @@ class PlaybackService : Service() {
             ACTION_FORWARD -> MediaBridge.controls?.seekBy(MediaBridge.seekSeconds)
 
             ACTION_EXIT -> {
-                // Stop playback, remove the notification and close the app's task.
-                val c = MediaBridge.controls
-                if (c != null) c.exit() else MediaBridge.onExit?.invoke()
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
+                exitApp()
                 return START_NOT_STICKY
             }
         }
@@ -116,6 +118,14 @@ class PlaybackService : Service() {
         return START_NOT_STICKY
     }
 
+    /** Stop playback, remove the notification and close the app's task. */
+    private fun exitApp() {
+        val c = MediaBridge.controls
+        if (c != null) c.exit() else MediaBridge.onExit?.invoke()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
     private fun refresh() {
         val playing = MediaBridge.state == MediaState.PLAYING
         session.setPlaybackState(
@@ -125,6 +135,7 @@ class PlaybackService : Service() {
                         PlaybackState.ACTION_REWIND or PlaybackState.ACTION_FAST_FORWARD or PlaybackState.ACTION_SKIP_TO_PREVIOUS or PlaybackState.ACTION_SKIP_TO_NEXT
                 )
                 .setState(if (playing) PlaybackState.STATE_PLAYING else PlaybackState.STATE_PAUSED, PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1f)
+                .addCustomAction(PlaybackState.CustomAction.Builder(ACTION_EXIT, "Exit", R.drawable.ic_notif_close).build())
                 .build()
         )
         loadThumbnail()
@@ -203,6 +214,7 @@ class PlaybackService : Service() {
     private val artLoader = java.util.concurrent.Executors.newSingleThreadExecutor()
 
     private fun siteLabel(): String = when {
+        com.streamshell.core.browser.MusicSite.playerVideoId(MediaBridge.pageUrl) != null -> "YouTube Music"
         MediaBridge.thumbnailUrl() != null -> "YouTube"
         else -> com.streamshell.core.browser.UrlHosts.hostOf(MediaBridge.pageUrl)?.removePrefix("www.") ?: "StreamShell"
     }

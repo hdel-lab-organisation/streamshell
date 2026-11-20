@@ -55,5 +55,9 @@
 | YouTube Music app mode; car source switch, now-playing cover, previous/next (0.6.2) | yes | unit + page simulation | no |
 | Bottom bar crash (YouTube ⇄ YouTube Music) fixed; mini player without page buttons (0.6.3) | yes | UI + page simulation | no |
 | YouTube Music player bar, track swipe, mini player, headset next/previous (0.6.3) | yes | unit | no |
+| Notification Engine: new videos, live now, upcoming streams; Room history, WorkManager interval, favourites (0.7.0) | yes | unit (rules, classification, sync) | no |
+| Subscriptions sync with complete/partial status and careful unsubscribe detection (0.7.0) | yes | unit | no |
+| Community post notifications | no (no reliable source) | – | – |
+| Android Auto adaptive navigation (side / bottom / menu, context buttons) (0.7.0) | yes | unit (placement, items) | no |
 | Signed release build (com.streamshell) | yes | build | no |
 

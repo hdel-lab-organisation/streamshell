@@ -18,6 +18,18 @@ object MusicSite {
         "s.textContent=" + org.json.JSONObject.quote(CSS) + ";(document.head||document.documentElement).appendChild(s);return 'ok';})()"
 
     fun isMusic(host: String?): Boolean = SiteApp.of(host) == SiteApp.YOUTUBE_MUSIC
+
+    /**
+     * Video id of YouTube Music's player page (music.youtube.com/watch?v=ID…), else null. Separate from
+     * SponsorBlockApi.videoIdOf, which leaves Music out on purpose (no SponsorBlock, no resume, no Watch later there):
+     * up to 0.7.0 the Music checks used that one and were never true (log of 2026-11-03 08:03).
+     */
+    fun playerVideoId(url: String?): String? {
+        if (!isMusic(UrlHosts.hostOf(url))) return null
+        val path = url.orEmpty().substringAfter("://").substringAfter('/', "").substringBefore('#')
+        if (!path.startsWith("watch")) return null
+        return path.substringAfter('?', "").split('&').firstOrNull { it.startsWith("v=") }?.substring(2)?.takeIf { Regex("[A-Za-z0-9_-]{11}").matches(it) }
+    }
 }
 
 /**

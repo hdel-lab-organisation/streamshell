@@ -75,6 +75,8 @@ object Backup {
         .put("leavePlayer", s.leavePlayer).put("captions", s.captions).put("captionsLanguage", s.captionsLanguage)
         .put("amoledBlack", s.amoledBlack).put("accent", s.accent).put("playerActionRow", s.playerActionRow)
         .put("carRailLeft", s.carRailLeft).put("carSource", s.carSource).put("yieldAudio", s.yieldAudio)
+        .put("newVideoNotifications", s.newVideoNotifications).put("notifyEnabled", s.notifyEnabled).put("notifyLive", s.notifyLive)
+        .put("notifyUpcoming", s.notifyUpcoming).put("notifyIntervalMin", s.notifyIntervalMin).put("notifyFavoritesOnly", s.notifyFavoritesOnly)
 
     fun settingsFromJson(o: JSONObject, d: AppSettings): AppSettings {
         fun b(k: String, def: Boolean) = if (o.has(k)) o.optBoolean(k, def) else def
@@ -109,7 +111,13 @@ object Backup {
             amoledBlack = b("amoledBlack", d.amoledBlack), accent = o.optString("accent", d.accent), playerActionRow = b("playerActionRow", d.playerActionRow),
             carRailLeft = b("carRailLeft", d.carRailLeft),
             carSource = o.optString("carSource", d.carSource).takeIf { it == "youtube" || it == "music" } ?: d.carSource,
-            yieldAudio = b("yieldAudio", d.yieldAudio)
+            yieldAudio = b("yieldAudio", d.yieldAudio),
+            newVideoNotifications = b("newVideoNotifications", d.newVideoNotifications),
+            notifyEnabled = b("notifyEnabled", d.notifyEnabled),
+            notifyLive = b("notifyLive", d.notifyLive),
+            notifyUpcoming = b("notifyUpcoming", d.notifyUpcoming),
+            notifyIntervalMin = com.streamshell.core.notify.NotifyRules.clampInterval(o.optInt("notifyIntervalMin", d.notifyIntervalMin)),
+            notifyFavoritesOnly = b("notifyFavoritesOnly", d.notifyFavoritesOnly)
         )
     }
 }

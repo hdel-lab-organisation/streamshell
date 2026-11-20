@@ -45,6 +45,7 @@ import androidx.compose.material.icons.outlined.Login
 import androidx.compose.material.icons.outlined.Logout
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.outlined.PauseCircle
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PictureInPictureAlt
@@ -58,6 +59,7 @@ import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.SlowMotionVideo
 import androidx.compose.material.icons.outlined.SmartDisplay
 import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.VideoLibrary
@@ -73,6 +75,7 @@ import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.MoreHoriz
+import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
@@ -81,6 +84,7 @@ import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.SlowMotionVideo
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Subscriptions
 import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -97,6 +101,12 @@ object StreamIcons {
     val Share get() = Icons.Outlined.Share
     val Download get() = Icons.Outlined.FileDownload
     val Next get() = Icons.Rounded.SkipNext
+
+    /** Channel bell (Subscriptions): new-video notifications on / off (0.6.7). */
+    val BellOn get() = Icons.Rounded.NotificationsActive
+    val BellOff get() = Icons.Outlined.NotificationsOff
+    val FavoriteOn get() = Icons.Rounded.Star
+    val FavoriteOff get() = Icons.Outlined.StarOutline
     val Previous get() = Icons.Rounded.SkipPrevious
     val Globe get() = Icons.Outlined.Language
     val Play get() = Icons.Outlined.PlayCircle

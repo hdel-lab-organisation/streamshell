@@ -82,6 +82,7 @@ class MainActivity : ComponentActivity() {
     private val browser: BrowserViewModel by viewModels()
     private val settingsVm: SettingsViewModel by viewModels()
     private val privacyVm: PrivacyViewModel by viewModels()
+    private val notificationsVm: com.streamshell.feature.settings.NotificationsViewModel by viewModels()
 
     private var inPip by mutableStateOf(false)
     private var askedNotifications = false
@@ -277,7 +278,7 @@ class MainActivity : ComponentActivity() {
         b.setActions(listOf(RemoteAction(icon, if (playing) "Pause" else "Play", if (playing) "Pause" else "Play", pi)))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val s = browser.state.value
-            b.setAutoEnterEnabled(MediaPolicy.shouldAutoPip(s.settings.autoPip, pipSupported, fs != null, s.media))
+            b.setAutoEnterEnabled(MediaPolicy.shouldAutoPip(s.settings.autoPip, pipSupported, fs != null, s.media, MediaPolicy.playingMusic()))
             b.setSeamlessResizeEnabled(true)
         }
         return b.build()
@@ -296,7 +297,7 @@ class MainActivity : ComponentActivity() {
         super.onUserLeaveHint()
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             val s = browser.state.value
-            if (MediaPolicy.shouldAutoPip(s.settings.autoPip, pipSupported, browser.engine.fullscreenView.value != null, s.media)) enterPip()
+            if (MediaPolicy.shouldAutoPip(s.settings.autoPip, pipSupported, browser.engine.fullscreenView.value != null, s.media, MediaPolicy.playingMusic())) enterPip()
         }
     }
 
@@ -360,9 +361,13 @@ class MainActivity : ComponentActivity() {
                 controller.show(WindowInsetsCompat.Type.systemBars())
             }
         }
-        LaunchedEffect(fullscreen, s.media, s.settings.autoPip, video) { refreshPipParams() }
+        LaunchedEffect(fullscreen, s.media, s.settings.autoPip, video, s.siteApp, s.currentUrl) { refreshPipParams() }
         val trace = s.settings.diagnostics && s.settings.traceEverything
         LaunchedEffect(trace) { if (trace) frames.start() else frames.stop() }
+        // New-video notifications need Android 13's permission: asked once there are channels to watch (0.6.7).
+        LaunchedEffect(s.settings.notifyEnabled, s.watch.channels.isNotEmpty()) {
+            if (s.settings.notifyEnabled && s.watch.channels.isNotEmpty()) maybeAskNotificationPermission()
+        }
         LaunchedEffect(s.media, s.settings.backgroundPlayback) {
             if (s.media == MediaState.PLAYING && s.settings.backgroundPlayback) maybeAskNotificationPermission()
         }
@@ -449,6 +454,7 @@ class MainActivity : ComponentActivity() {
             onRefreshFeed = browser::refreshFeed,
             onOpenChannel = browser::openChannel,
             onRemoveChannel = browser::removeChannel,
+            onToggleChannelBell = browser::toggleChannelBell,
             onSeekTo = browser::seekTo,
             onQueryPosition = browser::queryPosition,
             onFullscreenTap = browser::fullscreenTap,
@@ -485,6 +491,7 @@ class MainActivity : ComponentActivity() {
         val settingsActions = SettingsActions(
             onUpdate = settingsVm::update,
             onOpenPrivacy = { browser.dispatch(NavAction.Open(com.streamshell.core.model.Overlay.Privacy)) },
+            onOpenNotifications = { browser.dispatch(NavAction.Open(com.streamshell.core.model.Overlay.Notifications)) },
             onResetSettings = settingsVm::resetSettings,
             onOpenExternal = { url -> browser.openInNewTab(url) },
             onClearData = browser::clearBrowsingData,
@@ -532,6 +539,26 @@ class MainActivity : ComponentActivity() {
                     snackbar = snackbar,
                     settingsContent = { onClose -> SettingsScreen(settingsState, settingsActions, onClose) },
                     privacyContent = { onClose -> PrivacyScreen(privacyState, privacyActions, onClose) },
+                    notificationsContent = { onClose ->
+                        val notifyState by notificationsVm.state.collectAsStateWithLifecycle()
+                        com.streamshell.feature.settings.NotificationsScreen(
+                            notifyState,
+                            com.streamshell.feature.settings.NotificationsActions(
+                                onUpdate = notificationsVm::update,
+                                onBell = notificationsVm::setBell,
+                                onFavorite = notificationsVm::setFavorite,
+                                onSyncNow = browser::syncNotificationsNow,
+                                onOpen = { url ->
+                                    browser.dispatch(NavAction.Open(com.streamshell.core.model.Overlay.None))
+                                    browser.openInNewTab(url)
+                                },
+                                onRefreshPermission = notificationsVm::refreshPermission,
+                                onTest = notificationsVm::sendTest,
+                                onBattery = notificationsVm::requestBatteryExemption
+                            ),
+                            onClose
+                        )
+                    },
                     diagnosticsContent = { onClose ->
                         com.streamshell.feature.browser.DiagnosticsPanel(
                             diagLines,

@@ -15,8 +15,8 @@ android {
         applicationId = "com.streamshell"
         minSdk = 26
         targetSdk = 35
-        versionCode = 54
-        versionName = "0.6.4"
+        versionCode = 59
+        versionName = "0.7.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -101,6 +101,12 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.car.app)
+    // Speed and other car data under Android Auto (CarHardwareManager needs the projected implementation).
+    implementation(libs.androidx.car.app.projected)
+    // Notification Engine (0.7.0): channels, events, history.
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
@@ -146,4 +152,8 @@ tasks.withType<Test>().configureEach {
     systemProperty("roborazzi.output.dir", layout.buildDirectory.dir("outputs/screenshots").get().asFile.absolutePath)
     systemProperty("robolectric.offline", "true")
     systemProperty("robolectric.dependency.dir", robolectricDepsDir.get().asFile.absolutePath)
+}
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }

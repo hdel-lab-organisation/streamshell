@@ -123,6 +123,13 @@ class DataStoreSettingsRepository(private val store: DataStore<Preferences>) : S
         val carRailLeft = booleanPreferencesKey("car_rail_left")
         val carSource = stringPreferencesKey("car_source")
         val yieldAudio = booleanPreferencesKey("yield_audio")
+        val newVideos = booleanPreferencesKey("new_video_notifications")
+        val notifyOn = booleanPreferencesKey("notify_enabled")
+        val notifyLive = booleanPreferencesKey("notify_live")
+        val notifyUpcoming = booleanPreferencesKey("notify_upcoming")
+        val notifyCommunity = booleanPreferencesKey("notify_community")
+        val notifyInterval = intPreferencesKey("notify_interval_min")
+        val notifyFavorites = booleanPreferencesKey("notify_favorites_only")
     }
 
     private fun Preferences.toSettings(): AppSettings {
@@ -184,7 +191,15 @@ class DataStoreSettingsRepository(private val store: DataStore<Preferences>) : S
                 playerActionRow = this[Keys.actionRow] ?: d.playerActionRow,
                 carRailLeft = this[Keys.carRailLeft] ?: d.carRailLeft,
                 carSource = (this[Keys.carSource] ?: d.carSource).takeIf { it == "youtube" || it == "music" } ?: d.carSource,
-                yieldAudio = this[Keys.yieldAudio] ?: d.yieldAudio
+                yieldAudio = this[Keys.yieldAudio] ?: d.yieldAudio,
+                newVideoNotifications = this[Keys.newVideos] ?: d.newVideoNotifications,
+                notifyEnabled = this[Keys.notifyOn] ?: d.notifyEnabled,
+                notifyLive = this[Keys.notifyLive] ?: d.notifyLive,
+                notifyUpcoming = this[Keys.notifyUpcoming] ?: d.notifyUpcoming,
+                // Community posts: no reliable source (0.7.0), always off.
+                notifyCommunity = false,
+                notifyIntervalMin = com.streamshell.core.notify.NotifyRules.clampInterval(this[Keys.notifyInterval] ?: d.notifyIntervalMin),
+                notifyFavoritesOnly = this[Keys.notifyFavorites] ?: d.notifyFavoritesOnly
             )
         )
     }
@@ -252,6 +267,13 @@ class DataStoreSettingsRepository(private val store: DataStore<Preferences>) : S
             p[Keys.carRailLeft] = n.carRailLeft
             p[Keys.carSource] = n.carSource
             p[Keys.yieldAudio] = n.yieldAudio
+            p[Keys.newVideos] = n.newVideoNotifications
+            p[Keys.notifyOn] = n.notifyEnabled
+            p[Keys.notifyLive] = n.notifyLive
+            p[Keys.notifyUpcoming] = n.notifyUpcoming
+            p[Keys.notifyCommunity] = false
+            p[Keys.notifyInterval] = com.streamshell.core.notify.NotifyRules.clampInterval(n.notifyIntervalMin)
+            p[Keys.notifyFavorites] = n.notifyFavoritesOnly
         }
     }
 

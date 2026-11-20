@@ -104,6 +104,8 @@ class CarSession(private val makeEngine: () -> BrowserEngine, private val settin
         }
         com.streamshell.core.media.AudioCoordinator.log = { line -> DiagnosticsHub.add("audio", line) }
         com.streamshell.core.media.AudioCoordinator.register(carContext, audio)
+        // The car's page plays from now on: the phone's pages are silenced (0.6.5, pause / play flicker in the car).
+        com.streamshell.core.media.CarPresence.set(true)
         // The car's speed decides whether the picture may show (sound always plays).
         carContext.requestPermissions(listOf(SPEED_PERMISSION)) { granted, _ ->
             val ok = SPEED_PERMISSION in granted
@@ -114,6 +116,7 @@ class CarSession(private val makeEngine: () -> BrowserEngine, private val settin
             override fun onDestroy(owner: LifecycleOwner) {
                 log("session ended: picture and page closed")
                 com.streamshell.core.media.AudioCoordinator.unregister(audio)
+                com.streamshell.core.media.CarPresence.set(false)
                 speedListener?.let { l -> runCatching { carContext.getCarService(CarHardwareManager::class.java).carInfo.removeSpeedListener(l) } }
                 b.release()
                 e.destroy()
