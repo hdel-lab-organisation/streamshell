@@ -668,6 +668,13 @@ class BrowserEngine(
     fun seekMedia(id: Long, seconds: Int) {
         tabs[id]?.view?.evaluateJavascript(MediaScripts.seekBy(seconds.coerceIn(-600, 600)), null)
     }
+
+    /** Fullscreen: puts the picture back if a swipe left it out of place; [onResult] gets the offset found, or null (0.7.3). */
+    fun settleFullscreen(id: Long, onResult: (Int?) -> Unit) {
+        val v = tabs[id]?.view ?: return onResult(null)
+        v.evaluateJavascript(MediaScripts.FULLSCREEN_SETTLE) { r -> onResult(MediaScripts.parseSettle(r)) }
+    }
+
     fun pauseMedia(id: Long) {
         tabs[id]?.view?.evaluateJavascript(MediaScripts.PAUSE, null)
     }

@@ -59,5 +59,7 @@
 | Subscriptions sync with complete/partial status and careful unsubscribe detection (0.7.0) | yes | unit | no |
 | Community post notifications | no (no reliable source) | – | – |
 | Android Auto adaptive navigation (side / bottom / menu, context buttons) (0.7.0) | yes | unit (placement, items) | no |
+| Fullscreen swipes kept from the page, picture settle check; instant double-tap jumps with ripple indicator (0.7.3) | yes | unit + page simulation | no |
+| Mini player re-measures the video; live chat keeps its swipes (0.7.3) | yes | unit + page simulation | no |
 | Signed release build (com.streamshell) | yes | build | no |
 

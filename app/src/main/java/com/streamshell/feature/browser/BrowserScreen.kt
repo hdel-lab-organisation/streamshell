@@ -174,6 +174,8 @@ data class BrowserActions(
     val onFullscreenTap: (Float, Float) -> Unit = { _, _ -> },
     /** Fullscreen: a further tap of a double-tap series, forward or back (0.7.2). */
     val onFullscreenSeekTap: (Boolean) -> Unit = {},
+    /** A brightness / volume swipe in fullscreen ended: check the picture is still in place (0.7.3). */
+    val onFullscreenSwipeEnd: () -> Unit = {},
     /** Wide screens, live stream: open / close the live chat window. */
     val onWideChat: (Boolean) -> Unit = {},
     /** The screen is wide enough for the recommendations column next to the player (true) or not (false). */
@@ -604,12 +606,12 @@ private fun Immersive(view: View, state: BrowserUiState, actions: BrowserActions
     var seekToken by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     androidx.compose.runtime.LaunchedEffect(seekToken) {
         if (seekHud != null) {
-            kotlinx.coroutines.delay(800)
+            kotlinx.coroutines.delay(SEEK_HUD_MS)
             seekHud = null
         }
     }
     val ownDoubleTap = state.settings.doubleTapSeek && state.onYouTube
-    val swipe = rememberSwipeControls(state.settings.swipeControls, onExit = actions.onExitFullscreen, onPinch = actions.onVideoZoom) { v, l ->
+    val swipe = rememberSwipeControls(state.settings.swipeControls, onExit = actions.onExitFullscreen, onPinch = actions.onVideoZoom, onSwipeEnd = actions.onFullscreenSwipeEnd) { v, l ->
         swipeHud = v to l
         hudToken++
     }
@@ -647,15 +649,7 @@ private fun Immersive(view: View, state: BrowserUiState, actions: BrowserActions
         }
         if (state.page.chapters.size >= 2) ChapterOverlay(state, actions, touch)
         swipeHud?.let { (isVolume, level) -> SwipeHud(isVolume, level) }
-        seekHud?.let { (forward, seconds) ->
-            Text(
-                if (forward) "$seconds s »" else "« $seconds s",
-                color = Color.White,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.align(if (forward) Alignment.CenterEnd else Alignment.CenterStart).padding(horizontal = 48.dp)
-                    .glass(StreamColors.OnMedia, RoundedCornerShape(Radius.pill), strong = true).padding(horizontal = 16.dp, vertical = 10.dp).testTag("seek-hud")
-            )
-        }
+        SeekRipple(seekHud, seekToken)
         androidx.compose.animation.AnimatedVisibility(
             exitVisible,
             enter = androidx.compose.animation.fadeIn(),
@@ -668,14 +662,83 @@ private fun Immersive(view: View, state: BrowserUiState, actions: BrowserActions
 }
 
 /**
+ * Fullscreen double tap (0.7.3), like the YouTube app: a soft half-round shade on the tapped side with three arrows
+ * running in the jump's direction and the series' total. Fades and grows in, pulses on every further tap, fades out.
+ */
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.SeekRipple(hud: Pair<Boolean, Int>?, token: Int) {
+    // The last values stay while the bubble fades out (not state: written while composing).
+    val last = remember { arrayOf(hud ?: (true to 0)) }
+    if (hud != null) last[0] = hud
+    val (forward, seconds) = last[0]
+    val pulse = remember { androidx.compose.animation.core.Animatable(1f) }
+    androidx.compose.runtime.LaunchedEffect(token) {
+        if (hud == null) return@LaunchedEffect
+        pulse.snapTo(0.9f)
+        pulse.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.5f, stiffness = 600f))
+    }
+    androidx.compose.animation.AnimatedVisibility(
+        visible = hud != null,
+        enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(120)) +
+            androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(160), initialScale = 0.85f),
+        exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(220)),
+        modifier = Modifier.align(if (forward) Alignment.CenterEnd else Alignment.CenterStart).fillMaxHeight().fillMaxWidth(0.34f)
+    ) {
+        val shape = if (forward) {
+            RoundedCornerShape(topStartPercent = 50, bottomStartPercent = 50)
+        } else {
+            RoundedCornerShape(topEndPercent = 50, bottomEndPercent = 50)
+        }
+        Box(Modifier.fillMaxSize().clip(shape).background(Color.White.copy(alpha = 0.10f)).testTag("seek-hud"), contentAlignment = Alignment.Center) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.graphicsLayer {
+                    scaleX = pulse.value
+                    scaleY = pulse.value
+                }
+            ) {
+                SeekArrows(forward)
+                Text(if (forward) "+$seconds s" else "−$seconds s", color = Color.White, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 6.dp))
+            }
+        }
+    }
+}
+
+/** Three arrows lighting up one after the other in the jump's direction. */
+@Composable
+private fun SeekArrows(forward: Boolean) {
+    val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "seek-arrows")
+    val phase by t.animateFloat(
+        0f,
+        3f,
+        androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(600, easing = androidx.compose.animation.core.LinearEasing)),
+        label = "phase"
+    )
+    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        for (i in 0 until 3) {
+            val k = if (forward) i else 2 - i
+            val lit = 1f - (kotlin.math.abs(phase - k).coerceAtMost(1.5f) / 1.5f)
+            Text(if (forward) "▶" else "◀", color = Color.White.copy(alpha = 0.35f + 0.65f * lit), style = MaterialTheme.typography.labelLarge)
+        }
+    }
+}
+
+/**
  * Fullscreen: a vertical swipe on the left half changes the screen brightness, on the right half the volume (like the
  * YouTube patches people use). Only a clear up/down swipe counts; taps, sideways drags and the top and bottom bands
  * (YouTube's buttons and timeline) stay YouTube's. The brightness is the app window's own and goes back to the system
  * setting when fullscreen ends.
  */
 @Composable
-private fun rememberSwipeControls(enabled: Boolean, onExit: () -> Unit, onPinch: (Boolean) -> Unit, onHud: (isVolume: Boolean, level: Float) -> Unit): Modifier {
+private fun rememberSwipeControls(
+    enabled: Boolean,
+    onExit: () -> Unit,
+    onPinch: (Boolean) -> Unit,
+    onSwipeEnd: () -> Unit,
+    onHud: (isVolume: Boolean, level: Float) -> Unit
+): Modifier {
     val exit by androidx.compose.runtime.rememberUpdatedState(onExit)
+    val swipeEnd by androidx.compose.runtime.rememberUpdatedState(onSwipeEnd)
     val pinch by androidx.compose.runtime.rememberUpdatedState(onPinch)
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val activity = remember(ctx) { generateSequence(ctx) { (it as? android.content.ContextWrapper)?.baseContext }.firstOrNull { it is android.app.Activity } as? android.app.Activity }
@@ -686,6 +749,7 @@ private fun rememberSwipeControls(enabled: Boolean, onExit: () -> Unit, onPinch:
     }
     return Modifier.pointerInput(activity, audio, enabled) {
         val slop = 24.dp.toPx()
+        val lockSlop = SWIPE_LOCK_DP.dp.toPx()
         val exitDistance = 72.dp.toPx()
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
@@ -703,7 +767,8 @@ private fun rememberSwipeControls(enabled: Boolean, onExit: () -> Unit, onPinch:
             val volume = zone == 1
             var dx = 0f
             var dy = 0f
-            var claimed = false
+            var locked = false // the page has had a cancel: the gesture is ours
+            var claimed = false // far enough: the level follows the finger
             var start = 0f
             var pinchStart = 0f
             var pinched = false
@@ -744,9 +809,21 @@ private fun rememberSwipeControls(enabled: Boolean, onExit: () -> Unit, onPinch:
                     }
                     continue
                 }
+                if (!locked) {
+                    // 0.7.3: an up/down move is taken from the page at once (~8 dp), before YouTube starts its own swipe-up
+                    // of the player — at 24 dp the player had already moved and stayed up 5–6 mm (log 2026-11-22 11:12:34).
+                    when (com.streamshell.core.browser.PlayerOpen.swipeLock(dx, dy, lockSlop)) {
+                        true -> locked = true
+
+                        false -> break
+
+                        // sideways: YouTube's
+                        null -> continue
+                    }
+                }
+                ch.consume()
                 if (!claimed) {
-                    if (kotlin.math.abs(dx) > slop && kotlin.math.abs(dx) > kotlin.math.abs(dy)) break // sideways: YouTube's
-                    if (kotlin.math.abs(dy) > slop && kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) {
+                    if (kotlin.math.abs(dy) > slop) {
                         claimed = true
                         start = if (volume) {
                             audio?.let { it.getStreamVolume(android.media.AudioManager.STREAM_MUSIC).toFloat() / it.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC).coerceAtLeast(1) } ?: 0f
@@ -759,7 +836,6 @@ private fun rememberSwipeControls(enabled: Boolean, onExit: () -> Unit, onPinch:
                         continue
                     }
                 }
-                ch.consume() // from here the swipe is ours: the video page gets a cancel
                 val level = (start - dy / (h * 0.7f)).coerceIn(0f, 1f)
                 if (volume) {
                     audio?.let { a ->
@@ -771,6 +847,8 @@ private fun rememberSwipeControls(enabled: Boolean, onExit: () -> Unit, onPinch:
                 }
                 hud(volume, level)
             }
+            // 0.7.3: check afterwards that the picture is still in place (safety net, logged).
+            if (locked) swipeEnd()
         }
     }
 }
@@ -1277,8 +1355,8 @@ private fun SheetItem(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
 }
 
 /**
- * Watches touches on their way to the web view (Initial pass, nothing is consumed, so the page still gets
- * every touch) and recognises two clear one-finger swipes down:
+ * Watches touches on their way to the web view (Initial pass; the page still gets every touch, except a clear swipe
+ * down over a video, taken from 24 dp on — 0.7.3) and recognises two clear one-finger swipes down:
  *  - starting on the video ([minimize] on): [onMinimize];
  *  - starting elsewhere while the page is scrolled to the very top ([refresh] on): pull to refresh. [onPull]
  *    reports the pull (0 = none, 1 = far enough); letting go past 1 calls [onRefresh].
@@ -1295,6 +1373,7 @@ private fun Modifier.pageGestures(
     onRefresh: () -> Unit
 ): Modifier = this.pointerInput(video, music, videoPage, minimize, refresh) {
     val threshold = 96.dp.toPx()
+    val claimDistance = MINIMIZE_CLAIM_DP.dp.toPx()
     val pullDistance = 120.dp.toPx()
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
@@ -1314,6 +1393,8 @@ private fun Modifier.pageGestures(
         }
         var dx = 0f
         var dy = 0f
+        var claimed = false
+        val takesMinimize = mode == 1 && !music // YouTube Music's own player bar keeps its swipe as before
         try {
             while (true) {
                 val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
@@ -1327,6 +1408,13 @@ private fun Modifier.pageGestures(
                 dx += d.x
                 dy += d.y
                 if (dy < -threshold / 2) break // swiping up: leave it to the page
+                // 0.7.3: a clear swipe down over the video is taken from the page (it gets a cancel): the page moved under
+                // the finger and the mini player cut the video out at its old place — half of it black (log 2026-11-22).
+                val clearDown = dy > claimDistance && dy > 2 * kotlin.math.abs(dx)
+                if (takesMinimize && (claimed || clearDown)) {
+                    claimed = true
+                    ch.consume()
+                }
                 if (mode == 1 && dy > threshold && dy > 2 * kotlin.math.abs(dx)) {
                     onMinimize()
                     break
@@ -2375,3 +2463,12 @@ private const val MUSIC_SWIPE_AREA = 0.75f
 
 /** YouTube video page at its top: share of the height (from the top) where a swipe down minimizes. */
 private const val VIDEO_SWIPE_AREA = 0.5f
+
+/** Swipe down over the video: from this far (dp) it is taken from the page (0.7.3). */
+private const val MINIMIZE_CLAIM_DP = 24
+
+/** Fullscreen double tap: the bubble stays this long after the last tap (ms) (0.7.3). */
+private const val SEEK_HUD_MS = 600L
+
+/** Fullscreen brightness / volume: an up/down move this long (dp) is taken from the page (0.7.3). */
+private const val SWIPE_LOCK_DP = 8

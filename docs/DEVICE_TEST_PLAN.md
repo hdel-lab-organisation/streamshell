@@ -262,4 +262,8 @@ Nothing here has been run on a device yet: the build machine has no emulator (no
 | 259 | YouTube Music player: swipe left/right over the title | Next / previous track, short vibration |
 | 260 | YouTube Music, player collapsed: swipe on Music's bottom player bar | Next / previous track |
 | 261 | YouTube Music: short tap on a song title (trace on) | Opens; log shows "touch … on song link" and, if Music did nothing, "music tap: no reaction, link opened" |
-
+| 262 | Fullscreen: swipe up / down on the left and right third (several times, also slanted) | Brightness / volume change; the player never moves up; if it does, log "fullscreen: picture was … put back" |
+| 263 | Fullscreen: double tap right, then 3 quick taps | First jump at once, further taps added up; shade with arrows and "+40 s" fades in and out; log "double tap: +40 s in … jumps" |
+| 264 | Video page, swipe down over the video (also with the page scrolled a little) | Mini player shows the whole video, no black half |
+| 265 | Live stream on the phone: touch and swipe in the chat card | Page moves the card fully on screen, the chat scrolls at once; log "live chat: touch …" |
+| 266 | Log summary after a day with background checks | "errors 0" when nothing failed |

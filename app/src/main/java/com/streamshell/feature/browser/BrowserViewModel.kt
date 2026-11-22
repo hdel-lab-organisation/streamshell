@@ -418,6 +418,20 @@ class BrowserViewModel @Inject constructor(
                     }
                 }
         }
+        // 0.7.3: the mini player cuts the video out by its last measured place (measured every 1.5 s). The swipe down
+        // can move the page under it (log 2026-11-22 10:49:24) — half the mini player was black. Measured again at once
+        // and while it shrinks.
+        viewModelScope.launch {
+            miniTab.map { it != null }.distinctUntilChanged().collectLatest { on ->
+                if (!on) return@collectLatest
+                var last = 0L
+                for (at in MINI_REPROBE_MS) {
+                    delay(at - last)
+                    last = at
+                    probe()
+                }
+            }
+        }
         // Media watch: what the page plays decides the notification, background visibility and auto-PiP.
         viewModelScope.launch {
             while (true) {
@@ -529,25 +543,51 @@ class BrowserViewModel @Inject constructor(
         engine.seekMedia(mediaTabId, seconds)
     }
 
-    private var seriesSeconds = 0
-    private var seriesJob: kotlinx.coroutines.Job? = null
+    private val seekBatch = com.streamshell.core.browser.SeekBatch()
+    private var seekJob: kotlinx.coroutines.Job? = null
+    private var seriesTotal = 0
+    private var seriesJumps = 0
+    private var seriesLogJob: kotlinx.coroutines.Job? = null
 
     /**
-     * One further tap of a double-tap series in fullscreen ([PlayerOpen.SEEK_SERIES_MS]): the series becomes one jump
-     * through YouTube's own player (0.7.2, against the pause-and-pull-back after every single jump).
+     * One further tap of a double-tap series in fullscreen: jumps at once through YouTube's own player; taps while that
+     * jump settles are added up into one more jump right after it ([com.streamshell.core.browser.SeekBatch], 0.7.3).
      */
     fun fullscreenSeekTap(forward: Boolean) {
         val step = settings.value.seekSeconds
-        seriesSeconds += if (forward) step else -step
-        seriesJob?.cancel()
-        seriesJob = viewModelScope.launch {
-            delay(com.streamshell.core.browser.PlayerOpen.SEEK_SERIES_MS)
-            val total = seriesSeconds
-            seriesSeconds = 0
-            if (total != 0) {
-                appLog("double tap: one jump of " + (if (total > 0) "+" else "") + "$total s")
-                engine.seekMedia(mediaTabId, total)
+        val delta = if (forward) step else -step
+        seriesTotal += delta
+        val now = android.os.SystemClock.uptimeMillis()
+        seekBatch.add(delta, now)?.let { jump(it) }
+        if (seekBatch.waiting && seekJob?.isActive != true) {
+            seekJob = viewModelScope.launch {
+                delay((seekBatch.readyAt() - android.os.SystemClock.uptimeMillis()).coerceAtLeast(0))
+                seekBatch.due(android.os.SystemClock.uptimeMillis())?.let { jump(it) }
             }
+        }
+        seriesLogJob?.cancel()
+        seriesLogJob = viewModelScope.launch {
+            delay(com.streamshell.core.browser.PlayerOpen.SERIES_GAP_MS + com.streamshell.core.browser.PlayerOpen.SEEK_BUSY_MS)
+            appLog("double tap: " + (if (seriesTotal > 0) "+" else "") + "$seriesTotal s in $seriesJumps jump" + (if (seriesJumps == 1) "" else "s"))
+            seriesTotal = 0
+            seriesJumps = 0
+        }
+    }
+
+    private fun jump(seconds: Int) {
+        seriesJumps++
+        engine.seekMedia(mediaTabId, seconds)
+    }
+
+    /**
+     * A brightness / volume swipe in fullscreen ended (0.7.3): if the picture has moved out of its place (YouTube's own
+     * swipe-up of the player, log 2026-11-22), it is put back and the line logged.
+     */
+    fun fullscreenSwipeEnd() {
+        val tab = mediaTabId
+        viewModelScope.launch {
+            delay(FULLSCREEN_SETTLE_DELAY_MS)
+            engine.settleFullscreen(tab) { moved -> if (moved != null) appLog("fullscreen: picture was $moved px out of place after a swipe, put back") }
         }
     }
 
@@ -725,6 +765,10 @@ class BrowserViewModel @Inject constructor(
         /** Page id of the live chat window (outside the tab ids, which count up from 1). */
         const val CHAT_PAGE_ID = Long.MAX_VALUE - 8
         const val MINI_ANIMATION_MS = 420L
+
+        /** After the mini player opens, the video's place is measured again at these times (ms) (0.7.3). */
+        val MINI_REPROBE_MS = longArrayOf(0, 250, 600, 1000)
+        const val FULLSCREEN_SETTLE_DELAY_MS = 300L
         const val BREAK_RESET_MS = 5 * 60_000L
         const val FEED_CHANNELS = 80
     }

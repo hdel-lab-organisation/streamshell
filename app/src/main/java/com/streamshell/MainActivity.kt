@@ -459,6 +459,7 @@ class MainActivity : ComponentActivity() {
             onQueryPosition = browser::queryPosition,
             onFullscreenTap = browser::fullscreenTap,
             onFullscreenSeekTap = browser::fullscreenSeekTap,
+            onFullscreenSwipeEnd = browser::fullscreenSwipeEnd,
             onWideChat = browser::setWideChat,
             onRecommendationsColumn = browser::setRecommendationsColumn,
             onPlayAllLater = browser::playAllWatchLater,

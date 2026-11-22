@@ -53,6 +53,31 @@ Status words: **untested on device** (implemented, not verified), **engine limit
 - Android may still discard a background WebView under memory pressure; then the instance reloads when you return. The app cannot prevent that.
 - Not yet tested on a device.
 
+## 0.7.3 (2026-11-22) — **untested on a device** — fixes from the log of 2026-11-22
+
+- Fullscreen brightness / volume swipe: the player moved up 5–6 mm and stayed there (log 11:12:34, 11:18:33: a swipe
+  up on the left / right third, then the user dragged it back down). Until the swipe passed 24 dp the page got the
+  whole move, and YouTube started its own swipe-up of the player; the cancel left it half way. Now an up/down move on
+  the side thirds is taken from the page after ~8 dp (ratio 1.5 : 1 against sideways); the level still changes from
+  24 dp. Safety net: 0.3 s after such a swipe the picture's place in the fullscreen view is checked; if it is more than
+  8 px off, scroll positions inside the fullscreen view and leftover translates on its containers are reset (log:
+  "fullscreen: picture was N px out of place after a swipe, put back"). Whether YouTube moves the player some other
+  way must be seen on the device; the middle third (swipe up = YouTube's) is unchanged.
+- Fullscreen double tap: the jump comes at once on every further tap (0.7.2 waited 0.45 s for the end of the series).
+  Taps while a jump settles (0.35 s) are added up and go as one jump right after it, so quick series still do not pile
+  up jumps (the pull-back of 0.7.2's log). New indicator like the YouTube app: a half-round shade on that side with
+  running arrows and the total ("+30 s"), soft in and out. The first tap still opens YouTube's controls (holding back
+  every tap would make play / pause slower). Log: "double tap: +30 s in 2 jumps".
+- Mini player half black: the mini player cuts the video out at its last measured place (every 1.5 s), and the swipe
+  down also moved the page (log 10:49:24, "drag -5,127" on the player). Now a clear swipe down over the video is taken
+  from the page from 24 dp on (not on YouTube Music), and the video's place is measured again at once and 0.25 / 0.6 /
+  1 s after the mini player opens.
+- Live chat on phones: the page scrolled first until the chat card was in the middle. The chat list now keeps its
+  swipes (overscroll-behavior: contain inside YouTube's chat frame), and the first touch on the chat moves the page so
+  the whole card is on screen below the player (log: "live chat: touch, card … page moves …"). There was no live
+  stream in the log of 2026-11-22: cause inferred from the code, to be checked with a live stream.
+- Diagnostics: "0 failed" (background notification check) no longer counts as an error ("errors 27" without one).
+
 ## 0.7.2 (2026-11-20) — **untested on a device** — fixes from the logs of 2026-11-06 and 2026-11-19
 
 Source restore: the working copy of 0.6.5–0.7.1 was lost when the work environment was replaced. The source was

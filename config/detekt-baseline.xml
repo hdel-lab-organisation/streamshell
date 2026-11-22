@@ -36,7 +36,7 @@
     <ID>CyclomaticComplexMethod:BrowserScreen.kt$@Composable private fun androidx.compose.foundation.layout.BoxScope.PageSurfaces(state: BrowserUiState, actions: BrowserActions, page: PageSurface, chrome: BrowserChrome, contentSize: androidx.compose.ui.unit.IntSize)</ID>
     <ID>CyclomaticComplexMethod:BrowserScreen.kt$@Composable private fun androidx.compose.foundation.layout.BoxScope.TabSlot( tabId: Long, isMini: Boolean, state: BrowserUiState, actions: BrowserActions, page: PageSurface, chrome: BrowserChrome, contentSize: androidx.compose.ui.unit.IntSize )</ID>
     <ID>CyclomaticComplexMethod:BrowserScreen.kt$@Composable private fun playerBarItem(k: String, state: BrowserUiState): Triple&lt;androidx.compose.ui.graphics.vector.ImageVector, String, Boolean&gt;</ID>
-    <ID>CyclomaticComplexMethod:BrowserScreen.kt$@Composable private fun rememberSwipeControls(enabled: Boolean, onExit: () -&gt; Unit, onPinch: (Boolean) -&gt; Unit, onHud: (isVolume: Boolean, level: Float) -&gt; Unit): Modifier</ID>
+    <ID>CyclomaticComplexMethod:BrowserScreen.kt$@Composable private fun rememberSwipeControls( enabled: Boolean, onExit: () -&gt; Unit, onPinch: (Boolean) -&gt; Unit, onSwipeEnd: () -&gt; Unit, onHud: (isVolume: Boolean, level: Float) -&gt; Unit ): Modifier</ID>
     <ID>CyclomaticComplexMethod:BrowserScreen.kt$@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class) @Composable private fun SiteMenuSheet( app: com.streamshell.core.browser.SiteApp, state: BrowserUiState, actions: BrowserActions, chrome: BrowserChrome, onDismiss: () -&gt; Unit, onShowBrowserBars: () -&gt; Unit )</ID>
     <ID>CyclomaticComplexMethod:BrowserScreen.kt$private fun Modifier.fullscreenDoubleTap(enabled: Boolean, onSeriesTap: (forward: Boolean, count: Int) -&gt; Unit): Modifier</ID>
     <ID>CyclomaticComplexMethod:BrowserScreen.kt$private fun Modifier.pageGestures( video: com.streamshell.core.media.VideoRect?, music: Boolean, videoPage: Boolean, minimize: Boolean, refresh: Boolean, atTop: () -&gt; Boolean, onMinimize: () -&gt; Unit, onPull: (Float) -&gt; Unit, onRefresh: () -&gt; Unit ): Modifier</ID>
@@ -352,6 +352,7 @@
     <ID>MaxLineLength:BrowserScreen.kt$Text("Up to ${bar.MAX} items, in this order. \"More\" is always last and holds everything else.", style = MaterialTheme.typography.bodySmall, color = c.textSecondary)</ID>
     <ID>MaxLineLength:BrowserScreen.kt$Text(PageMessages.explain(err), style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center, modifier = Modifier.padding(top = Spacing.sm))</ID>
     <ID>MaxLineLength:BrowserScreen.kt$Text(if (count &gt; 9) "9+" else "$count", style = MaterialTheme.typography.labelSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), color = c.textPrimary)</ID>
+    <ID>MaxLineLength:BrowserScreen.kt$Text(if (forward) "+$seconds s" else "−$seconds s", color = Color.White, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 6.dp))</ID>
     <ID>MaxLineLength:BrowserScreen.kt$Text(item.label, style = MaterialTheme.typography.bodyLarge, color = c.textSecondary, modifier = Modifier.weight(1f).padding(start = 12.dp))</ID>
     <ID>MaxLineLength:BrowserScreen.kt$Text(s, style = MaterialTheme.typography.bodyLarge, color = c.textPrimary, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f))</ID>
     <ID>MaxLineLength:BrowserScreen.kt$androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(800, easing = androidx.compose.animation.core.LinearEasing))</ID>
@@ -382,6 +383,7 @@
     <ID>MaxLineLength:BrowserScreen.kt$private</ID>
     <ID>MaxLineLength:BrowserScreen.kt$sheet?.takeIf { frame.x + frame.w &lt;= it.width &amp;&amp; frame.y + frame.h &lt;= it.height }?.let { android.graphics.Bitmap.createBitmap(it, frame.x, frame.y, frame.w, frame.h) }</ID>
     <ID>MaxLineLength:BrowserScreen.kt$style = MaterialTheme.typography.labelMedium.copy(fontWeight = if (on) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium)</ID>
+    <ID>MaxLineLength:BrowserScreen.kt$val</ID>
     <ID>MaxLineLength:BrowserScreen.kt$val activity = remember(ctx) { generateSequence(ctx) { (it as? android.content.ContextWrapper)?.baseContext }.firstOrNull { it is android.app.Activity } as? android.app.Activity }</ID>
     <ID>MaxLineLength:BrowserScreen.kt$val anim by androidx.compose.animation.core.animateFloatAsState(if (refreshing) 1f else pull.coerceAtMost(1.2f), androidx.compose.animation.core.spring(stiffness = 900f), label = "pull")</ID>
     <ID>MaxLineLength:BrowserScreen.kt$val bandAlpha by androidx.compose.animation.core.animateFloatAsState(if (loadingBand) 1f else 0f, androidx.compose.animation.core.tween(180), label = "band")</ID>
@@ -459,8 +461,10 @@
     <ID>MaxLineLength:MainActivity.kt$MainActivity$val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_SUBJECT, "StreamShell diagnostics").putExtra(Intent.EXTRA_TEXT, text)</ID>
     <ID>MaxLineLength:MediaPolicy.kt$MediaBridge$fun</ID>
     <ID>MaxLineLength:MediaPolicy.kt$MediaPolicy$fun</ID>
+    <ID>MaxLineLength:MediaPolicy.kt$MediaScripts$"if(Math.abs(off())&gt;$SETTLE_TOLERANCE_PX){e=v.parentElement;while(e&amp;&amp;e!==f.parentElement){if(e.style&amp;&amp;/translate/.test(e.style.transform||''))e.style.transform='';e=e.parentElement;}}"</ID>
     <ID>MaxLineLength:MediaPolicy.kt$MediaScripts$"if(mp&amp;&amp;mp.seekTo&amp;&amp;mp.getCurrentTime&amp;&amp;mp.getDuration){var c=mp.getCurrentTime(),du=mp.getDuration();if(isFinite(c)&amp;&amp;du&gt;0){mp.seekTo(Math.max(0,Math.min(du-0.5,c+d)),true);return 'yt';}}"</ID>
     <ID>MaxLineLength:MediaPolicy.kt$MediaScripts$"if(on){if(v.__ssVol==null){v.__ssVol=v.volume;v.volume=Math.min(v.volume,0.25);}}else if(v.__ssVol!=null){v.volume=v.__ssVol;v.__ssVol=null;}}catch(x){}}return 'ok';})("</ID>
+    <ID>MaxLineLength:MediaPolicy.kt$MediaScripts$*</ID>
     <ID>MaxLineLength:MediaPolicy.kt$MediaScripts$const</ID>
     <ID>MaxLineLength:MediaPolicy.kt$MediaScripts$fun</ID>
     <ID>MaxLineLength:Models.kt$VideoQuality$val OPTIONS = listOf("auto" to "Auto", "hd2160" to "2160p", "hd1440" to "1440p", "hd1080" to "1080p", "hd720" to "720p", "large" to "480p", "medium" to "360p", "small" to "240p")</ID>
@@ -664,6 +668,7 @@
     <ID>MaxLineLength:WatchPanels.kt$items(groups.keys.sorted()) { g -&gt; GlassChip("$g (${groups[g]?.size ?: 0})", group == g, { group = g }, Modifier.testTag("group-$g"), icon = StreamIcons.Group) }</ID>
     <ID>MaxLineLength:WatchPanels.kt$modifier = Modifier.align(Alignment.BottomStart).padding(4.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFFF0033)).padding(horizontal = 6.dp, vertical = 2.dp)</ID>
     <ID>MaxLineLength:WatchPanels.kt$state.sleep.endsAt != null -&gt; "Sleep timer · stops at " + java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(state.sleep.endsAt))</ID>
+    <ID>MaxLineLength:YouTubeAds.kt$YouTubeLiveChat$"var ss=document.createElement('style');ss.textContent='#item-scroller,yt-live-chat-item-list-renderer #item-scroller,#items{overscroll-behavior:contain!important}';"</ID>
     <ID>MaxLineLength:YouTubeAds.kt$YouTubeLiveChat$fun chatUrl(videoId: String, popout: Boolean)</ID>
     <ID>MaxLineLength:YouTubeAds.kt$YouTubeTimestamps$"for(var e2=el,d2=0;e2&amp;&amp;d2&lt;6;e2=e2.parentElement,d2++){var k=((typeof e2.className==='string'?e2.className:'')+' '+((e2.getAttribute&amp;&amp;e2.getAttribute('aria-label'))||'')).toLowerCase();"</ID>
     <ID>MaxLineLength:YouTubeAds.kt$YouTubeTimestamps$"for(var e=el,d=0;e&amp;&amp;d&lt;12;e=e.parentElement,d++){var n=((typeof e.className==='string'?e.className:'')+' '+((e.getAttribute&amp;&amp;e.getAttribute('role'))||'')).toLowerCase();"</ID>

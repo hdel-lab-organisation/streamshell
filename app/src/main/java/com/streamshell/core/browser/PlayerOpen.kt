@@ -10,11 +10,31 @@ object PlayerOpen {
      * Double tap in YouTube's fullscreen (0.7.2). Log 2026-11-19: every jump of YouTube's own double tap paused the
      * picture for about half a second and then pulled it back by 0.2–0.6 s (49 of 99 jumps). StreamShell takes the
      * double tap over: the first tap still goes to YouTube (its controls), every further quick tap on the same side is
-     * kept from the page and counted; one jump for the whole series, through YouTube's own player, after
-     * [SEEK_SERIES_MS] without a further tap.
+     * kept from the page and jumps through YouTube's own player.
+     *
+     * 0.7.3: the jump comes at once (0.7.2 waited [SEEK_SERIES_MS] for the end of the series — it felt late, log
+     * 2026-11-22). Taps that come while a jump is still settling ([SEEK_BUSY_MS]) are added up and go as one jump right
+     * after it ([SeekBatch]), so quick series still do not pile up jumps.
      */
     const val SEEK_SERIES_MS = 450L
+    const val SEEK_BUSY_MS = 350L
     const val SERIES_GAP_MS = 400L
+
+    /**
+     * Fullscreen brightness / volume swipe after a move of ([dx], [dy]) px (0.7.3): true = an up/down swipe, taken from the
+     * page now; false = sideways, the page's; null = not decided yet. [lockPx] is the move needed (~8 dp).
+     */
+    fun swipeLock(dx: Float, dy: Float, lockPx: Float): Boolean? {
+        val ax = kotlin.math.abs(dx)
+        val ay = kotlin.math.abs(dy)
+        return when {
+            ax > lockPx && ax > ay -> false
+            ay > lockPx && ay > LOCK_RATIO * ax -> true
+            else -> null
+        }
+    }
+
+    private const val LOCK_RATIO = 1.5f
 
     /** Side of a tap at [x] in [width]: left third = back (false), right third = forward (true), middle = none. */
     fun tapSide(x: Float, width: Float): Boolean? = when {
@@ -100,4 +120,32 @@ object PlayerOpen {
     const val UNSTARTED = -1
     const val CUED = 5
     const val UNKNOWN = -9
+}
+
+/** Adds up fullscreen double-tap jumps (0.7.3): one jump at once, taps during [PlayerOpen.SEEK_BUSY_MS] after it as one more. Pure. */
+class SeekBatch(private val busyMs: Long = PlayerOpen.SEEK_BUSY_MS) {
+    private var pending = 0
+    private var busyUntil = 0L
+
+    /** A tap of [seconds] at [now]: the jump to make now, or null (added to the next one, see [due]). */
+    fun add(seconds: Int, now: Long): Int? {
+        pending += seconds
+        return if (now >= busyUntil) take(now) else null
+    }
+
+    /** The added-up jump once the last one has settled, or null. */
+    fun due(now: Long): Int? = if (pending != 0 && now >= busyUntil) take(now) else null
+
+    /** Time when [due] can give the waiting jump. */
+    fun readyAt(): Long = busyUntil
+
+    val waiting: Boolean get() = pending != 0
+
+    private fun take(now: Long): Int? {
+        val s = pending
+        pending = 0
+        if (s == 0) return null
+        busyUntil = now + busyMs
+        return s
+    }
 }

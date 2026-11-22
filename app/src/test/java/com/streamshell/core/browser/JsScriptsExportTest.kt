@@ -24,6 +24,7 @@ class JsScriptsExportTest {
         File(dir, "duck-off.js").writeText(com.streamshell.core.media.MediaScripts.duck(false))
         File(dir, "extras-trace.js").writeText(YouTubeExtras.config("", dislikes = false, deArrow = false, markers = false, diag = true, trace = true))
         File(dir, "seekby.js").writeText(com.streamshell.core.media.MediaScripts.seekBy(10))
+        File(dir, "settle.js").writeText(com.streamshell.core.media.MediaScripts.FULLSCREEN_SETTLE)
         // Further page scripts, exported for ESLint (tools/lint/static-analysis.sh).
         val more = mapOf(
             "lint-sponsor.js" to com.streamshell.core.sponsor.SponsorScripts.install("dQw4w9WgXcQ", listOf(com.streamshell.core.sponsor.SkipSegment(10.0, 30.0, "sponsor", "a"))),

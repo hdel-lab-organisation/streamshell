@@ -13,3 +13,4 @@ node tools/js-sim/silent.js app/build/js-sim/silent-on.js app/build/js-sim/silen
 node tools/js-sim/release050.js app/build/js-sim/router-on.js app/build/js-sim/extras.js app/build/js-sim/extras-hide.js app/build/js-sim/repeat.js
 node tools/js-sim/trace.js app/build/js-sim/extras.js app/build/js-sim/extras-diag.js app/build/js-sim/extras-trace.js
 node tools/js-sim/media062.js app/build/js-sim/ms-capture.js app/build/js-sim/ms-next.js app/build/js-sim/ms-prev.js app/build/js-sim/ms-now.js app/build/js-sim/duck-on.js app/build/js-sim/duck-off.js
+node tools/js-sim/release073.js app/build/js-sim/live.js app/build/js-sim/settle.js

@@ -423,9 +423,25 @@ object YouTubeLiveChat {
 
     fun chatUrl(videoId: String, popout: Boolean) = "https://www.youtube.com/live_chat?v=$videoId" + if (popout) "&is_popout=1" else "&embed_domain=m.youtube.com"
 
+    /** The chat frame tells the page it was touched. */
+    const val CHAT_TOUCH = "ss-chat-touch"
+
+    /**
+     * Inside the chat frame (youtube.com/live_chat, 0.7.3): the message list keeps its swipes (no handing over to the
+     * page when it is at its end — the page scrolled first, log 2026-11-22), and a touch is told to the page.
+     */
+    private val FRAME_PART = (
+        "if(location.pathname==='/live_chat'&&!window.__ssChatFrame){window.__ssChatFrame=true;" +
+            "var ss=document.createElement('style');ss.textContent='#item-scroller,yt-live-chat-item-list-renderer #item-scroller,#items{overscroll-behavior:contain!important}';" +
+            "var hd=document.head||document.documentElement;if(hd)hd.appendChild(ss);" +
+            "var lt=0;document.addEventListener('touchstart',function(){var n=Date.now();if(n-lt<1500)return;lt=n;" +
+            "try{var d=new URL(location.href).searchParams.get('embed_domain')||'m.youtube.com';if(!/(^|\\.)youtube\\.com${'$'}/.test(d))return;" +
+            "window.parent.postMessage('$CHAT_TOUCH','https://'+d);}catch(x){}},{capture:true,passive:true});}"
+        )
+
     val INSTALL: String = """
 (function(){
-if(window.top&&window.top!==window)return 'frame';if(window.__streamshellLive)return 'ok';window.__streamshellLive=true;
+if(window.top&&window.top!==window){$FRAME_PART return 'frame';}if(window.__streamshellLive)return 'ok';window.__streamshellLive=true;
 var lastV=null,live=null,box=null,open=true;
 function vid(){try{var u=new URL(location.href);return u.pathname==='/watch'?u.searchParams.get('v'):null;}catch(e){return null;}}
 function isLive(){var mp=document.getElementById('movie_player');try{if(mp&&mp.getVideoData){var d=mp.getVideoData();if(d&&d.isLive)return true;}}catch(e){}
@@ -451,6 +467,14 @@ function tick(){var v=vid();if(v!==lastV){lastV=v;live=null;removeBox();}if(!v)r
 var l=isLive();if(l!==live){live=l;post(l?'1':'0');}
 if(l&&window.__ssChatInline!==false)ensureBox(v);else removeBox();}
 setInterval(tick,1500);tick();
+// 0.7.3: a touch on the chat (told by the chat frame) moves the page so the whole card is on screen below the player;
+// the chat then takes the swipes itself.
+function diag(m){if(window.streamShellSponsor)window.streamShellSponsor.postMessage('${YouTubeExtras.DIAG}'+m);}
+if(window.addEventListener)window.addEventListener('message',function(e){if(e.origin!=='https://www.youtube.com'||e.data!=='$CHAT_TOUCH'||!box||!box.isConnected)return;
+var r=box.getBoundingClientRect();var p=document.querySelector('#player-container-id,.player-container');var top=p?Math.max(0,p.getBoundingClientRect().bottom):0;
+var dy=0;if(r.top<top)dy=r.top-top-8;else if(r.bottom>innerHeight)dy=Math.min(r.top-top-8,r.bottom-innerHeight+8);
+diag('live chat: touch, card '+Math.round(r.top)+'..'+Math.round(r.bottom)+' of '+innerHeight+', page moves '+Math.round(dy));
+if(Math.abs(dy)>4)window.scrollBy({top:dy,behavior:'smooth'});});
 // Sound on: a video you open plays with sound right away. YouTube carries the muted state of a feed preview into the
 // video page (the "tap to unmute" button). Once per video, when the real video (not an ad) starts, the sound is turned
 // on — through YouTube's own player, so its controls agree; muting it yourself afterwards is respected.

@@ -363,9 +363,13 @@ class PageScriptFramesTest {
     /** Page scripts run in YouTube's own top page only — not in the live chat frame or in players embedded on other sites. */
     @Test fun layoutScriptsStayOutOfFrames() {
         val guard = "if(window.top&&window.top!==window)return 'frame';"
-        for (js in listOf(YouTubeSite.INSTALL, YouTubeAutoplay.INSTALL, YouTubeRouter.INSTALL, YouTubeTimestamps.INSTALL, YouTubeLiveChat.INSTALL)) {
+        for (js in listOf(YouTubeSite.INSTALL, YouTubeAutoplay.INSTALL, YouTubeRouter.INSTALL, YouTubeTimestamps.INSTALL)) {
             org.junit.Assert.assertTrue(js.contains(guard))
         }
+        // 0.7.3: the live chat script does one thing in frames — inside YouTube's chat frame only — and stops there.
+        val chat = YouTubeLiveChat.INSTALL
+        val frame = chat.substringAfter("if(window.top&&window.top!==window){").substringBefore("return 'frame';}")
+        org.junit.Assert.assertTrue(frame.startsWith("if(location.pathname==='/live_chat'"))
         // The ad skipper also works in embedded players.
         org.junit.Assert.assertFalse(YouTubeAds.INSTALL.contains(guard))
     }

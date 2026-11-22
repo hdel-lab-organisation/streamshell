@@ -138,9 +138,10 @@ object DiagnosticsSummary {
 
     /**
      * Error lines. "failed N" counts only for N > 0: every "page finished … failed 0" line was counted before (0.7.2,
-     * log 2026-11-06: "errors 20" without a single error).
+     * log 2026-11-06: "errors 20" without a single error). Likewise "0 failed" (0.7.3: the notifications' "background check …
+     * feeds 175 read, 0 failed" gave "errors 27" in the log of 2026-11-22).
      */
-    private val ERRORS = Regex("error|crash|process ended|failed(?! 0\\b)", RegexOption.IGNORE_CASE)
+    private val ERRORS = Regex("error|crash|process ended|(?<!\\b0 )failed(?! 0\\b)", RegexOption.IGNORE_CASE)
     private const val DAY_MS = 86_400_000L
 
     private fun clock(ms: Long): String {

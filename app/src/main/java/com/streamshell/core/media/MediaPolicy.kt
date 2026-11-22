@@ -59,6 +59,28 @@ object MediaScripts {
         "for(var i=0;i<m.length;i++){if(m[i].readyState>0){v=m[i];break;}}" +
         "if(v&&v.paused){var p=v.play();if(p&&p.catch){p.catch(function(){});}}return 'ok';})()"
 
+    const val SETTLE_TOLERANCE_PX = 8
+
+    /**
+     * Fullscreen, after a brightness / volume swipe (0.7.3): is the picture still centred in the fullscreen view? If it is
+     * more than [SETTLE_TOLERANCE_PX] CSS px off (YouTube's own swipe-up of the player stopped half way, log 2026-11-22),
+     * scroll positions inside the fullscreen view go back to 0 (the page's own scroll is left alone) and, if that is not enough, a leftover translate on its containers is removed.
+     * Returns "ok", "none" or "moved|<px before>|<px after>".
+     */
+    const val FULLSCREEN_SETTLE = "(function(){var f=document.fullscreenElement||document.webkitFullscreenElement;if(!f)return 'none';" +
+        "var v=f.querySelector('video')||document.querySelector('.html5-video-player video');if(!v)return 'none';" +
+        "function off(){var r=v.getBoundingClientRect(),fr=f.getBoundingClientRect();return Math.round(r.top-(fr.top+(fr.height-r.height)/2));}" +
+        "var o=off();if(Math.abs(o)<=$SETTLE_TOLERANCE_PX)return 'ok';" +
+        "var e=v;while(e&&e!==f.parentElement){if(e.scrollTop)e.scrollTop=0;e=e.parentElement;}" +
+        "if(Math.abs(off())>$SETTLE_TOLERANCE_PX){e=v.parentElement;while(e&&e!==f.parentElement){if(e.style&&/translate/.test(e.style.transform||''))e.style.transform='';e=e.parentElement;}}" +
+        "return 'moved|'+o+'|'+off();})()"
+
+    /** [FULLSCREEN_SETTLE]'s result: the offset found (CSS px), or null when the picture was in place. */
+    fun parseSettle(result: String?): Int? {
+        val p = result?.trim()?.trim('"')?.split('|') ?: return null
+        return if (p.size == 3 && p[0] == "moved") p[1].toIntOrNull() else null
+    }
+
     /** evaluateJavascript returns a JSON value, e.g. "\"playing\"". Anything unexpected means "no media". */
     fun parse(result: String?): MediaState = parseProbe(result).state
 
