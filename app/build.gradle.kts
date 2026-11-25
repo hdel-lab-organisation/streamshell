@@ -15,8 +15,8 @@ android {
         applicationId = "com.streamshell"
         minSdk = 26
         targetSdk = 35
-        versionCode = 62
-        versionName = "0.7.4"
+        versionCode = 63
+        versionName = "0.7.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

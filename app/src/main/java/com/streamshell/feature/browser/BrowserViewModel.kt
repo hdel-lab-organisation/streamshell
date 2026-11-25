@@ -506,6 +506,20 @@ class BrowserViewModel @Inject constructor(
             engine.run(mediaTabId, com.streamshell.core.media.PlayerScripts.quality("tiny"))
         }
         engine.flushCookies()
+        // 0.7.5: leaving from fullscreen ended background playback — 41 ms later YouTube emptied the video and nothing played
+        // for 14 min (log 2026-11-25 17:37:37). Android takes the fullscreen video's surface away with the window; the
+        // page's own picture keeps playing. So fullscreen ends first, then the video goes on.
+        if (MediaPolicy.leaveFullscreenForBackground(isInPip, settings.value.backgroundPlayback, engine.media.value, engine.fullscreenView.value != null)) {
+            val tab = mediaTabId
+            appLog("background: fullscreen ended so the video keeps playing")
+            engine.exitFullscreen()
+            viewModelScope.launch {
+                delay(com.streamshell.core.media.MediaPolicy.RESUME_AFTER_FULLSCREEN_MS)
+                if (!foreground) engine.playMedia(tab)
+                delay(com.streamshell.core.media.MediaPolicy.RESUME_AFTER_FULLSCREEN_MS)
+                if (!foreground) engine.playMedia(tab)
+            }
+        }
         when (MediaPolicy.onLeave(isInPip, settings.value.backgroundPlayback, engine.media.value)) {
             LeaveAction.KEEP_FOR_PIP, LeaveAction.CONTINUE_IN_BACKGROUND -> Unit
 
@@ -747,6 +761,7 @@ class BrowserViewModel @Inject constructor(
     }
 
     private fun goTo(id: Long, url: String, what: String) {
+        if (heldFeed == id) heldFeed = null // loaded here now
         val fromStart = tabs.value.tabs.firstOrNull { it.id == id }?.let { it.showingStart || it.url == null } ?: false
         tabs.update { s -> TabsReducer.update(s, id) { it.copy(url = url, showingStart = false, openedFromStart = if (fromStart) true else it.openedFromStart) } }
         engine.navigateInPlace(id, url) { how -> appLog("$what → tab $id, $how") }
@@ -975,6 +990,7 @@ class BrowserViewModel @Inject constructor(
         tabs.update { TabsReducer.select(it, id) }
         nav.value = NavState()
         ensureLoaded(id)
+        if (id == heldFeed) releaseFeed("tab opened")
     }
 
     fun closeTab(id: Long) {
@@ -1203,6 +1219,7 @@ class BrowserViewModel @Inject constructor(
         val yt = com.streamshell.core.browser.YouTubeSite.isYouTube(UrlHosts.hostOf(mediaUrl()))
         if (!yt) return
         appLog("player ready: $vid (loading band off)")
+        releaseFeed("the video plays")
         readyAt = System.currentTimeMillis() to tab
         // Only a recent tap counts; an older one belongs to an open that never played in this tab (0.7.1).
         openedAt.remove(tab)?.let { at ->
@@ -1518,10 +1535,39 @@ class BrowserViewModel @Inject constructor(
         if (com.streamshell.core.browser.YouTubeSite.isYouTube(UrlHosts.hostOf(url)) && com.streamshell.core.sponsor.SponsorBlockApi.videoIdOf(url) != null) {
             openSiteApp(com.streamshell.core.browser.SiteApp.YOUTUBE)
             val inst = TabsReducer.instanceTab(tabs.value, com.streamshell.core.browser.SiteApp.YOUTUBE.name) ?: return
+            holdFeedForVideo(inst.id)
             onOpenVideo(inst.id, url)
         } else {
             open(url)
         }
+    }
+
+    private val createdAt = android.os.SystemClock.uptimeMillis()
+    private var heldFeed: Long? = null
+
+    /**
+     * App started straight on a video (notification, link; 0.7.5, log 2026-11-25 17:36:41): the YouTube feed loaded at the
+     * same time — start-up 2.1 s, 17 of 124 frames dropped, nothing under the player for 8 s. The feed's load is stopped
+     * and comes once the video plays, at the latest after [com.streamshell.core.browser.PlayerOpen.FEED_HOLD_MS].
+     */
+    private fun holdFeedForVideo(inst: Long) {
+        if (!com.streamshell.core.browser.PlayerOpen.coldStart(createdAt, android.os.SystemClock.uptimeMillis())) return
+        if (engine.pages.value[inst]?.loading != true) return
+        engine.stopLoading(inst)
+        heldFeed = inst
+        appLog("start: the feed (tab $inst) waits until the video plays")
+        viewModelScope.launch {
+            delay(com.streamshell.core.browser.PlayerOpen.FEED_HOLD_MS)
+            releaseFeed("after ${com.streamshell.core.browser.PlayerOpen.FEED_HOLD_MS / 1000} s")
+        }
+    }
+
+    private fun releaseFeed(why: String) {
+        val inst = heldFeed ?: return
+        heldFeed = null
+        val url = tabs.value.tabs.firstOrNull { it.id == inst }?.url ?: com.streamshell.core.browser.SiteApp.YOUTUBE.destinations.first().url
+        appLog("start: the feed loads now ($why)")
+        engine.load(inst, url)
     }
 
     /** Launcher shortcut "Continue watching": the most recent video, or the Watch later list. */

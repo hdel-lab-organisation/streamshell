@@ -15,3 +15,4 @@ node tools/js-sim/trace.js app/build/js-sim/extras.js app/build/js-sim/extras-di
 node tools/js-sim/media062.js app/build/js-sim/ms-capture.js app/build/js-sim/ms-next.js app/build/js-sim/ms-prev.js app/build/js-sim/ms-now.js app/build/js-sim/duck-on.js app/build/js-sim/duck-off.js
 node tools/js-sim/release073.js app/build/js-sim/live.js app/build/js-sim/settle.js
 node tools/js-sim/release074.js app/build/js-sim/playerlinks.js app/build/js-sim/barswitch.js app/build/js-sim/extras.js app/build/js-sim/extras-trace.js app/build/js-sim/ads.js
+node tools/js-sim/release075.js app/build/js-sim/extras.js app/build/js-sim/extras-trace.js

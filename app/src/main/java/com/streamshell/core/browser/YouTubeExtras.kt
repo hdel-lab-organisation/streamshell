@@ -70,6 +70,7 @@ object YouTubeExtras {
     /** Diagnostics: a page empty this long (ms) is logged; checked this often (0.7.4). */
     const val EMPTY_LOG_MS = 2000
     const val EMPTY_POLL_MS = 500
+    const val EMPTY_MIN_HEIGHT = 300
 
     const val DISLIKES = "rytd|"
     const val DEARROW = "dearrow|"
@@ -212,8 +213,10 @@ document.addEventListener('pointerdown',function(e){if(cfg().trace)down={x:e.cli
 document.addEventListener('pointerup',function(e){if(!cfg().trace||!down)return;var dx=e.clientX-down.x,dy=e.clientY-down.y,dt=Date.now()-down.t,d=Math.sqrt(dx*dx+dy*dy);
 tlog((d<10?(dt>=500?'long press':'touch'):'drag '+Math.round(dx)+','+Math.round(dy))+' '+dt+' ms on '+kind(e.target)+' at '+Math.round(e.clientX)+','+Math.round(e.clientY));down=null;},true);
 window.addEventListener('click',function(e){if(cfg().trace)tlog('click on '+kind(e.target));},true);
-window.addEventListener('scroll',function(){if(!cfg().trace)return;var n=Date.now();if(!scr)scr={y:window.scrollY||0,t:n,h:0};scr.e=n;clearTimeout(scr.h);
-scr.h=setTimeout(function(){if(scr)tlog('scroll '+Math.round((window.scrollY||0)-scr.y)+' px in '+(scr.e-scr.t)+' ms');scr=null;},300);},{passive:true,capture:true});
+window.addEventListener('scroll',function(e){if(!cfg().trace)return;var n=Date.now();if(!scr)scr={y:window.scrollY||0,t:n,h:0,page:false};scr.e=n;
+// 0.7.5: scrolls of an element inside the page (YouTube's own rotating shelves) are "inner scroll", not page scrolls.
+if(!e||e.target===document||e.target===document.documentElement||e.target===document.body||e.target===window)scr.page=true;clearTimeout(scr.h);
+scr.h=setTimeout(function(){if(scr){var dy=Math.round((window.scrollY||0)-scr.y);tlog((dy===0&&!scr.page?'inner scroll in ':'scroll '+dy+' px in ')+(scr.e-scr.t)+' ms');}scr=null;},300);},{passive:true,capture:true});
 document.addEventListener('waiting',function(e){var v=e.target;if(!v||v.tagName!=='VIDEO')return;if(v.ended||(isFinite(v.duration)&&v.duration-v.currentTime<0.5)){wAt=0;return;}wAt=Date.now();wSeek=!!v.seeking;},true);
 document.addEventListener('pause',function(e){if(e.target&&e.target.tagName==='VIDEO'&&!e.target.seeking)wAt=0;},true);
 document.addEventListener('seeking',function(e){if(e.target&&e.target.tagName==='VIDEO'&&wAt)wSeek=true;},true);
@@ -225,7 +228,9 @@ window.addEventListener('unhandledrejection',function(e){if(cfg().trace)tlog('pa
 // 0.7.4: a page that stays empty (white) for 2 s or more — nothing but the page's own background under three points of
 // the screen — is logged with its length when content appears ("page empty N ms on /path").
 var emptyAt=0,emptyLogged=false;var BARE={HTML:1,BODY:1,'YTM-APP':1,'YTM-PAGE-MANAGER':1,'YTM-BROWSE':1,'YTM-SEARCH':1,'YTM-SINGLE-COLUMN-BROWSE-RESULTS-RENDERER':1,'YTM-SPINNER':1};
-function bare(){var w=window.innerWidth,h=window.innerHeight;if(!w||!h||!document.elementFromPoint)return false;var ys=[0.35,0.55,0.75];
+// 0.7.5: not in the mini player (all but the player painted black on purpose), fullscreen or picture-in-picture (a tiny window).
+function bare(){var w=window.innerWidth,h=window.innerHeight;if(!w||!h||!document.elementFromPoint)return false;
+var de=document.documentElement;if((de&&de.classList&&de.classList.contains('ss-mini'))||document.fullscreenElement||document.webkitFullscreenElement||h<$EMPTY_MIN_HEIGHT)return false;var ys=[0.35,0.55,0.75];
 for(var i=0;i<ys.length;i++){var el=document.elementFromPoint(w/2,h*ys[i]);if(el&&!BARE[el.tagName])return false;}return true;}
 setInterval(function(){if(!cfg().trace)return;var n=Date.now();
 if(bare()){if(!emptyAt){emptyAt=n;emptyLogged=false;}else if(!emptyLogged&&n-emptyAt>=$EMPTY_LOG_MS){emptyLogged=true;tlog('page empty for 2 s on '+location.pathname+' (still)');}return;}

@@ -53,6 +53,22 @@ Status words: **untested on device** (implemented, not verified), **engine limit
 - Android may still discard a background WebView under memory pressure; then the instance reloads when you return. The app cannot prevent that.
 - Not yet tested on a device.
 
+## 0.7.5 (2026-11-25) — **untested on a device** — fixes from the log of 2026-11-25 17:51
+
+- Background playback from fullscreen: leaving the app while a fullscreen video played ended it — 41 ms later YouTube
+  emptied the video and nothing played for 14 min (17:37:37). Cause inferred: Android takes the fullscreen video's
+  own surface away with the window. Now, when leaving with background playback on (not into PiP), fullscreen ends
+  first and the video is played again 0.7 s and 1.4 s later (log "background: fullscreen ended so the video keeps
+  playing"). Back in the app the video is in the normal view; fullscreen needs a tap (a page cannot re-enter it by
+  itself).
+- App started straight on a video (notification, link): the feed loaded at the same time (start-up 2.1 s, 17 of 124
+  frames dropped, nothing under the player for 8 s). The feed's load now waits until the video plays, at most 5 s
+  (log "start: the feed … waits", "start: the feed loads now (…)").
+- Diagnostics: "page empty" no longer in the mini player (painted black on purpose), fullscreen or picture-in-picture;
+  scrolls of an element inside the page are "inner scroll in N ms" (YouTube's own rotating shelves gave "scroll 0 px
+  in ~4100 ms" every few seconds).
+- Not changed: picture-in-picture right after saving the log (17:51:30) — open question whether the app was left.
+
 ## 0.7.4 (2026-11-25) — **untested on a device** — fixes from the log of 2026-11-25 (white pages, jumps)
 
 - Bottom bar (Home, Subscriptions, Live, You): every tap loaded the whole page again — white for 0.5–1.4 s, two loads

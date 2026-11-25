@@ -273,3 +273,6 @@ Nothing here has been run on a device yet: the build machine has no emulator (no
 | 270 | Watching a video: tap the channel name | Channel in the YouTube tab, video in the mini player; Back returns to the feed |
 | 271 | Mini player X during an ad, keep scrolling the feed | No "Skip button pressed" / "ads: reload" for the closed tab in the log; next video plays normally |
 | 272 | Trace on, a page stays white | Log "page empty for 2 s … (still)" and "page empty N ms on …"; summary "empty pages" |
+| 273 | Fullscreen video playing, background playback on: Home (PiP off) and screen off | Sound goes on; log "background: fullscreen ended so the video keeps playing", frames lines go on |
+| 274 | Open a video from a notification with the app closed | Video starts in about 1 s; log "start: the feed … waits" then "loads now (the video plays)" |
+| 275 | Trace on: mini player for a few seconds | No "page empty" line; YouTube's shelves show "inner scroll …" |

@@ -763,6 +763,7 @@
     <ID>TooManyFunctions:MainActivity.kt$MainActivity : ComponentActivity</ID>
     <ID>TooManyFunctions:NotificationEngine.kt$NotificationDispatcher</ID>
     <ID>TooManyFunctions:NotifyDatabase.kt$NotifyDao</ID>
+    <ID>TooManyFunctions:PlayerOpen.kt$PlayerOpen</ID>
     <ID>TooManyFunctions:PlayerScripts.kt$PlayerScripts</ID>
     <ID>TooManyFunctions:PrivacyScreen.kt$com.streamshell.feature.privacy.PrivacyScreen.kt</ID>
     <ID>TooManyFunctions:PrivacyViewModel.kt$PrivacyViewModel : ViewModel</ID>

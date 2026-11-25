@@ -121,6 +121,12 @@ enum class LeaveAction {
 }
 
 object MediaPolicy {
+    /** Leaving the app while a fullscreen video plays with background playback on (not into PiP): end fullscreen first (0.7.5). */
+    fun leaveFullscreenForBackground(inPip: Boolean, backgroundEnabled: Boolean, media: MediaState, fullscreen: Boolean): Boolean = fullscreen && onLeave(inPip, backgroundEnabled, media) == LeaveAction.CONTINUE_IN_BACKGROUND
+
+    /** After fullscreen ended in the background, the video is played again this long after (twice; 0.7.5). */
+    const val RESUME_AFTER_FULLSCREEN_MS = 700L
+
     fun onLeave(inPip: Boolean, backgroundEnabled: Boolean, media: MediaState): LeaveAction = when {
         inPip -> LeaveAction.KEEP_FOR_PIP
         backgroundEnabled && media == MediaState.PLAYING -> LeaveAction.CONTINUE_IN_BACKGROUND

@@ -62,5 +62,6 @@
 | Fullscreen swipes kept from the page, picture settle check; instant double-tap jumps with ripple indicator (0.7.3) | yes | unit + page simulation | no |
 | Mini player re-measures the video; live chat keeps its swipes (0.7.3) | yes | unit + page simulation | no |
 | Bottom bar inside the loaded page, player tab links to the instance, closed mini player stays still, empty-page trace (0.7.4) | yes | unit + page simulation | no |
+| Background playback from fullscreen, feed waits for a cold-start video, quieter trace (0.7.5) | yes | unit + page simulation | no |
 | Signed release build (com.streamshell) | yes | build | no |
 

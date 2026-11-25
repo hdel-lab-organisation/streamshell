@@ -20,6 +20,14 @@ object PlayerOpen {
     const val SEEK_BUSY_MS = 350L
     const val SERIES_GAP_MS = 400L
 
+    /** App start (0.7.5): a video opened within this time after the app started is a cold start. */
+    const val COLD_START_MS = 6000L
+
+    /** On a cold start with a video, the feed waits at most this long for it (0.7.5). */
+    const val FEED_HOLD_MS = 5000L
+
+    fun coldStart(createdAt: Long, now: Long): Boolean = now - createdAt in 0 until COLD_START_MS
+
     /**
      * Fullscreen brightness / volume swipe after a move of ([dx], [dy]) px (0.7.3): true = an up/down swipe, taken from the
      * page now; false = sideways, the page's; null = not decided yet. [lockPx] is the move needed (~8 dp).
