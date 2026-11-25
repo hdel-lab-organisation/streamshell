@@ -86,6 +86,9 @@ function report(){if(reported)return;reported=true;if(window.streamShellSponsor)
 function onScreen(el){try{return !!(el&&el.getClientRects().length>0&&!el.disabled);}catch(e){return false;}}
 function unrate(v){if(rated){rated=false;try{v.playbackRate=prevRate;}catch(e){}}}
 function tick(){style();
+// 0.7.4: a silent tab (not the one that may play — e.g. a mini player closed with X) leaves ads alone: it pressed Skip
+// three times and loaded the closed video again in the background (log 2026-11-25 16:45:28–33).
+if(window.__ssSilent)return;
 var player=document.querySelector('.html5-video-player');
 var ad=!!(player&&(player.classList.contains('ad-showing')||player.classList.contains('ad-interrupting')));
 var v=player?player.querySelector('video'):null;

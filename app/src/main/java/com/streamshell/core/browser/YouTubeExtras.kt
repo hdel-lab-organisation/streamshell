@@ -67,6 +67,10 @@ object SponsorColors {
  * Only YouTube's own top page; everything is read from / written to the page, nothing else is sent anywhere.
  */
 object YouTubeExtras {
+    /** Diagnostics: a page empty this long (ms) is logged; checked this often (0.7.4). */
+    const val EMPTY_LOG_MS = 2000
+    const val EMPTY_POLL_MS = 500
+
     const val DISLIKES = "rytd|"
     const val DEARROW = "dearrow|"
 
@@ -218,6 +222,14 @@ document.addEventListener('stalled',function(e){if(e.target&&e.target.tagName===
 document.addEventListener('fullscreenchange',function(){tlog('page fullscreen '+(document.fullscreenElement?'on':'off'));});
 window.addEventListener('error',function(e){if(cfg().trace&&e&&e.message)tlog('page error: '+clean(e.message));},true);
 window.addEventListener('unhandledrejection',function(e){if(cfg().trace)tlog('page promise error: '+clean(e&&e.reason&&e.reason.message||(e&&e.reason)));});
+// 0.7.4: a page that stays empty (white) for 2 s or more — nothing but the page's own background under three points of
+// the screen — is logged with its length when content appears ("page empty N ms on /path").
+var emptyAt=0,emptyLogged=false;var BARE={HTML:1,BODY:1,'YTM-APP':1,'YTM-PAGE-MANAGER':1,'YTM-BROWSE':1,'YTM-SEARCH':1,'YTM-SINGLE-COLUMN-BROWSE-RESULTS-RENDERER':1,'YTM-SPINNER':1};
+function bare(){var w=window.innerWidth,h=window.innerHeight;if(!w||!h||!document.elementFromPoint)return false;var ys=[0.35,0.55,0.75];
+for(var i=0;i<ys.length;i++){var el=document.elementFromPoint(w/2,h*ys[i]);if(el&&!BARE[el.tagName])return false;}return true;}
+setInterval(function(){if(!cfg().trace)return;var n=Date.now();
+if(bare()){if(!emptyAt){emptyAt=n;emptyLogged=false;}else if(!emptyLogged&&n-emptyAt>=$EMPTY_LOG_MS){emptyLogged=true;tlog('page empty for 2 s on '+location.pathname+' (still)');}return;}
+if(emptyAt&&n-emptyAt>=$EMPTY_LOG_MS)tlog('page empty '+(n-emptyAt)+' ms on '+location.pathname);emptyAt=0;},$EMPTY_POLL_MS);
 setInterval(function(){if(!cfg().trace)return;var v=document.querySelector('#movie_player video')||document.querySelector('video');if(!v||v.paused||!v.getVideoPlaybackQuality)return;
 var q=v.getVideoPlaybackQuality(),mp=document.getElementById('movie_player'),ql='';try{ql=mp&&mp.getPlaybackQuality?mp.getPlaybackQuality():'';}catch(x){}
 var dd=q.droppedVideoFrames,tt=q.totalVideoFrames;if(lastQ&&tt>=lastQ.t){dd-=lastQ.d;tt-=lastQ.t;}lastQ={d:q.droppedVideoFrames,t:q.totalVideoFrames};

@@ -430,7 +430,7 @@ class MainActivity : ComponentActivity() {
             onToggleSiteExempt = browser::toggleSiteExempt,
             onResolveBlocked = browser::resolveBlockedNavigation,
             onPip = ::enterPip,
-            onSiteDestination = { d -> browser.open(d.url) },
+            onSiteDestination = browser::openSiteDestination,
             onSiteSearch = browser::searchInSite,
             searchSuggestions = { q -> browser.searchSuggestions(q) },
             onClearRecentSearches = browser::clearRecentSearches,

@@ -91,6 +91,9 @@ interface EngineListener {
     /** The YouTube instance tab [tabId] asked to open a video ([url] is a checked https watch URL). */
     fun onOpenVideo(tabId: Long, url: String) {}
 
+    /** A YouTube player tab [tabId] asked to open a page that is not a video (channel, search, list…; 0.7.4). */
+    fun onOpenPage(tabId: Long, url: String) {}
+
     /** SponsorBlock jumped over a segment ([category], length in seconds). Default: ignore. */
     fun onSponsorSkipped(tabId: Long, category: String, seconds: Int) {}
 
@@ -282,6 +285,30 @@ class BrowserEngine(
         }
     }
 
+    /** YouTube player tabs: their links to channels, searches, lists… go to the instance (0.7.4). */
+    private val playerLinkTabs = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
+    private val playerLinkHandlers = HashMap<Long, androidx.webkit.ScriptHandler>()
+
+    fun setPlayerLinks(id: Long, on: Boolean) {
+        if (on == (id in playerLinkTabs)) return
+        if (on) playerLinkTabs += id else playerLinkTabs -= id
+        val t = tabs[id] ?: return
+        applyPlayerLinks(id, t.view)
+        if (YouTubeSite.isYouTube(UrlHosts.hostOf(t.pageUrl))) {
+            t.view.evaluateJavascript(if (on) YouTubePlayerLinks.FLAG + YouTubePlayerLinks.INSTALL else YouTubePlayerLinks.OFF, null)
+        }
+    }
+
+    private fun applyPlayerLinks(id: Long, view: WebView) {
+        playerLinkHandlers.remove(id)?.let { runCatching { it.remove() } }
+        if (id !in playerLinkTabs) return
+        runCatching {
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+                playerLinkHandlers[id] = androidx.webkit.WebViewCompat.addDocumentStartJavaScript(view, YouTubePlayerLinks.FLAG + YouTubePlayerLinks.INSTALL, YouTubeSite.origins)
+            }
+        }
+    }
+
     private fun applyRouteScripts(id: Long, view: WebView) {
         routeHandlers.remove(id)?.let { runCatching { it.remove() } }
         if (id !in routeTabs) return
@@ -462,7 +489,10 @@ class BrowserEngine(
     private fun tapSkip(id: Long, m: PageMessage.TapSkip) {
         val (x, y, iw, ih) = m
         val view = tabs[id]?.view ?: return
-        if (!skipAds || view.width == 0) return
+        // 0.7.4: only the tab that may play and is on screen. A closed mini player's tab got a touch while hidden; its
+        // release waited until the tab was shown again 24 s later ("long press 24263 ms", log 2026-11-25 16:45:54).
+        val onScreen = view.width > 0 && view.isAttachedToWindow && !isSilent(id)
+        if (!skipAds || !onScreen) return
         val now = android.os.SystemClock.uptimeMillis()
         if (now - (lastTap[id] ?: 0L) < 1000) return
         lastTap[id] = now
@@ -472,7 +502,8 @@ class BrowserEngine(
         val down = ev(android.view.MotionEvent.ACTION_DOWN, now)
         view.dispatchTouchEvent(down)
         down.recycle()
-        view.postDelayed({
+        // The release goes through the main thread's handler: a view's own queue holds it while the view is detached.
+        mainHandler.postDelayed({
             val up = ev(android.view.MotionEvent.ACTION_UP, android.os.SystemClock.uptimeMillis())
             view.dispatchTouchEvent(up)
             up.recycle()
@@ -532,6 +563,56 @@ class BrowserEngine(
         }
     }
 
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val barGeneration = HashMap<Long, Int>()
+
+    /**
+     * A section of the site's bottom bar (Home, Subscriptions, …) in tab [id] (0.7.4): YouTube's own page changes inside
+     * the already loaded page (as its own links do) — before, every tap loaded the whole page again (white for 0.5–1.4 s,
+     * log 2026-11-25 16:45:19). The same section again scrolls to the top. [onResult] gets what was done, for the log.
+     * If the page is still where it was after [BarNav.CHECK_MS] (YouTube did not follow), the section is loaded normally.
+     */
+    fun navigateInPlace(id: Long, url: String, onResult: (String) -> Unit) {
+        val view = tabs[id]?.view
+        when (if (view == null) BarNav.How.LOAD else BarNav.how(view.url, url)) {
+            BarNav.How.TOP -> {
+                view?.evaluateJavascript("window.scrollTo({top:0,behavior:'smooth'});", null)
+                onResult("already there, to the top")
+            }
+
+            BarNav.How.LOAD -> {
+                load(id, url)
+                onResult("full load")
+            }
+
+            BarNav.How.IN_PAGE -> {
+                val v = view ?: return
+                val gen = (barGeneration[id] ?: 0) + 1
+                barGeneration[id] = gen
+                loadReason[id] = "app"
+                val before = BarNav.pathOf(v.url)
+                v.evaluateJavascript(BarNav.switchScript(url)) { r ->
+                    if (r?.contains("ok") != true) {
+                        load(id, url)
+                        onResult("full load (in-page switch refused)")
+                        return@evaluateJavascript
+                    }
+                    onResult("in page")
+                    mainHandler.postDelayed({
+                        if (tabs[id]?.view !== v || barGeneration[id] != gen) return@postDelayed
+                        v.evaluateJavascript(BarNav.CHECK) { raw ->
+                            val where = BarNav.parseCheck(raw)
+                            if (BarNav.needsLoad(where, before, url)) {
+                                listener?.onDiagnostics(id, "bar: page still on '" + where + "' after " + BarNav.CHECK_MS + " ms, full load")
+                                load(id, url)
+                            }
+                        }
+                    }, BarNav.CHECK_MS)
+                }
+            }
+        }
+    }
+
     private val openGeneration = java.util.concurrent.atomic.AtomicInteger()
 
     /** Drops every pending "player still on the old video → load the page" check (mini player closed, 0.7.1). */
@@ -563,8 +644,10 @@ class BrowserEngine(
         adHandlers.remove(id)?.let { h -> runCatching { h.remove() } }
         autoplayHandlers.remove(id)?.let { h -> runCatching { h.remove() } }
         routeHandlers.remove(id)?.let { h -> runCatching { h.remove() } }
+        playerLinkHandlers.remove(id)?.let { h -> runCatching { h.remove() } }
         extrasHandlers.remove(id)?.let { h -> runCatching { h.remove() } }
         routeTabs.remove(id)
+        playerLinkTabs.remove(id)
         helperPages.remove(id)
         silentTabs.remove(id)
         val wasPrivate = privateTabs.remove(id)
@@ -855,6 +938,7 @@ class BrowserEngine(
         applyAdScript(id, wv)
         applyAutoplayScript(id, wv)
         applyRouteScripts(id, wv)
+        applyPlayerLinks(id, wv)
         applyExtrasScript(id, wv)
         if (id !in helperPages) {
             runCatching {
@@ -878,6 +962,14 @@ class BrowserEngine(
                     ) {
                         listener?.onOpenVideo(id, url)
                     }
+                }
+            }
+        }
+        runCatching {
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
+                androidx.webkit.WebViewCompat.addWebMessageListener(wv, YouTubePlayerLinks.CHANNEL, YouTubeSite.origins) { _, message, _, isMainFrame, _ ->
+                    val url = message.data ?: return@addWebMessageListener
+                    if (isMainFrame && id in playerLinkTabs && YouTubePlayerLinks.accepts(url)) listener?.onOpenPage(id, url)
                 }
             }
         }

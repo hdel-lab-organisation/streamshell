@@ -53,6 +53,26 @@ Status words: **untested on device** (implemented, not verified), **engine limit
 - Android may still discard a background WebView under memory pressure; then the instance reloads when you return. The app cannot prevent that.
 - Not yet tested on a device.
 
+## 0.7.4 (2026-11-25) — **untested on a device** — fixes from the log of 2026-11-25 (white pages, jumps)
+
+- Bottom bar (Home, Subscriptions, Live, You): every tap loaded the whole page again — white for 0.5–1.4 s, two loads
+  within 0.6 s on a double tap (16:45:19), and in the player tab the video was gone and that tab became a second home
+  (later "jump" back to the old feed when the mini player closed). Now on YouTube the section changes inside the
+  loaded page (history + popstate, like YouTube's own links); if the page is still where it was after 2.5 s, it is
+  loaded normally (log "bar: page still on … full load"). The section already shown: scroll to the top. From the
+  player tab the bar goes to the YouTube instance (the video to the mini player); its feed stays as it was when it
+  already shows that section. A second tap on the same section within 1.5 s is ignored. Shorts and YouTube Music
+  load as before. Log: "bar: home → tab 7, in page".
+- Player tab: links to channels, searches, lists, feeds and hashtags open in the instance, the video goes to the mini
+  player (the channel opened in the player tab stayed empty until a pull to refresh, 16:45:04–09). Videos, timestamps
+  and Shorts stay in the player.
+- Closed mini player: a silent tab (not the one that may play) leaves ads alone — it pressed Skip three times and
+  loaded the closed video again (16:45:28–33). The ad skipper's touch goes only to the playing, attached tab, and its
+  release always comes after 60 ms (it waited 24 s for the hidden tab: "long press 24263 ms", 16:45:54).
+- Diagnostics: "page empty N ms on /path" when a page stays empty (only the page background under three points of the
+  screen) for 2 s or more, "(still)" at 2 s; summary line "empty pages". A heuristic: a page with only a spinner or
+  a dark background counts as empty; one with a single small item does not.
+
 ## 0.7.3 (2026-11-22) — **untested on a device** — fixes from the log of 2026-11-22
 
 - Fullscreen brightness / volume swipe: the player moved up 5–6 mm and stayed there (log 11:12:34, 11:18:33: a swipe

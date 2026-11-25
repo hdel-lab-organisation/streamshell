@@ -267,3 +267,9 @@ Nothing here has been run on a device yet: the build machine has no emulator (no
 | 264 | Video page, swipe down over the video (also with the page scrolled a little) | Mini player shows the whole video, no black half |
 | 265 | Live stream on the phone: touch and swipe in the chat card | Page moves the card fully on screen, the chat scrolls at once; log "live chat: touch …" |
 | 266 | Log summary after a day with background checks | "errors 0" when nothing failed |
+| 267 | YouTube feed: tap Subscriptions, then Home in the bottom bar | No white page; log "bar: … in page"; Home again scrolls to the top |
+| 268 | Watching a video: tap Home in the bottom bar | Video in the mini player, feed as it was (no reload) |
+| 269 | Double tap on Home | One action; log "bar: home again within 1.5 s, ignored" |
+| 270 | Watching a video: tap the channel name | Channel in the YouTube tab, video in the mini player; Back returns to the feed |
+| 271 | Mini player X during an ad, keep scrolling the feed | No "Skip button pressed" / "ads: reload" for the closed tab in the log; next video plays normally |
+| 272 | Trace on, a page stays white | Log "page empty for 2 s … (still)" and "page empty N ms on …"; summary "empty pages" |

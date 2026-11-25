@@ -103,6 +103,7 @@ object DiagnosticsSummary {
     private val startUp = Regex("start-up: (\\d+) ms")
     private val buffering = Regex("buffering (\\d+) ms")
     private val seekWait = Regex("seek wait (\\d+) ms")
+    private val emptyPage = Regex("page empty (\\d+) ms")
     private val frames = Regex("frames: dropped (\\d+) of (\\d+) in 5 s")
     private val jank = Regex("jank: (\\d+) frames? over 50 ms.*worst (\\d+) ms")
 
@@ -122,6 +123,8 @@ object DiagnosticsSummary {
         val guard = lines.count { it.contains("tap guard:") }
         val seeks = lines.mapNotNull { seekWait.find(it)?.groupValues?.get(1)?.toLongOrNull() }
         val errors = lines.count { l -> ERRORS.containsMatchIn(l) }
+        val empty = lines.mapNotNull { emptyPage.find(it)?.groupValues?.get(1)?.toLongOrNull() }
+        val emptyStill = lines.count { it.contains("page empty for 2 s") && it.contains("(still)") }
         return buildList {
             add("== summary ==")
             add("session: ${clock(span)} · lines ${lines.size}" + (if (dropped > 0) " (oldest $dropped dropped)" else "") + (if (limited > 0) " · $limited lines refused by the rate limit" else ""))
@@ -131,6 +134,7 @@ object DiagnosticsSummary {
             add("dropped frames: " + if (allF > 0) "$dropF of $allF (${"%.2f".format(dropF * 100.0 / allF)} %)" else "no samples")
             add("screen stutter: " + if (jk.isEmpty()) "none logged" else "${jk.sumOf { it[1].toInt() }} frames over 50 ms, worst ${jk.maxOf { it[2].toInt() }} ms")
             add("page loads: " + if (loads.isEmpty()) "none" else loads.entries.joinToString(", ") { "${it.key} ${it.value}" })
+            if (empty.isNotEmpty() || emptyStill > 0) add("empty pages: ${maxOf(empty.size, emptyStill)}" + if (empty.isNotEmpty()) ", longest ${empty.max()} ms" else "")
             add("ads: $ads started, $skips skipped/jumped · tap guard blocked $guard · errors $errors")
             add("==")
         }.joinToString("\n")

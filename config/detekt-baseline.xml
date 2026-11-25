@@ -65,6 +65,7 @@
     <ID>CyclomaticComplexMethod:Watch.kt$WatchSerializer$fun encode(d: WatchData): Map&lt;String, String&gt;</ID>
     <ID>CyclomaticComplexMethod:WatchPanels.kt$@Composable fun SubscriptionsPanel(state: BrowserUiState, actions: BrowserActions)</ID>
     <ID>DestructuringDeclarationWithTooManyEntries:BrowserEngine.kt$BrowserEngine$val (x, y, iw, ih) = m</ID>
+    <ID>LargeClass:BrowserEngine.kt$BrowserEngine</ID>
     <ID>LargeClass:BrowserViewModel.kt$BrowserViewModel : AndroidViewModelEngineListenerMediaControls</ID>
     <ID>LongMethod:BrowserEngine.kt$BrowserEngine$@SuppressLint("SetJavaScriptEnabled") private fun createWebView(id: Long, wrapper: MutableContextWrapper): MediaWebView</ID>
     <ID>LongMethod:BrowserViewModel.kt$BrowserViewModel$private fun trackWatching(s: MediaState)</ID>
@@ -308,6 +309,7 @@
     <ID>MaxLineLength:BrowserEngine.kt$BrowserEngine$androidx.webkit.WebViewCompat</ID>
     <ID>MaxLineLength:BrowserEngine.kt$BrowserEngine$fun</ID>
     <ID>MaxLineLength:BrowserEngine.kt$BrowserEngine$if</ID>
+    <ID>MaxLineLength:BrowserEngine.kt$BrowserEngine$playerLinkHandlers[id] = androidx.webkit.WebViewCompat.addDocumentStartJavaScript(view, YouTubePlayerLinks.FLAG + YouTubePlayerLinks.INSTALL, YouTubeSite.origins)</ID>
     <ID>MaxLineLength:BrowserEngine.kt$BrowserEngine$private fun routeScript(): String</ID>
     <ID>MaxLineLength:BrowserEngine.kt$BrowserEngine$private val blockedResponse get() = WebResourceResponse("text/plain", "utf-8", 403, "Blocked by StreamShell", emptyMap(), ByteArrayInputStream(ByteArray(0)))</ID>
     <ID>MaxLineLength:BrowserEngine.kt$BrowserEngine$runCatching { if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) WebSettingsCompat.setAlgorithmicDarkeningAllowed(wv.settings, true) }</ID>
@@ -620,6 +622,7 @@
     <ID>MaxLineLength:Trace.kt$DiagnosticsSummary$add("screen stutter: " + if (jk.isEmpty()) "none logged" else "${jk.sumOf { it[1].toInt() }} frames over 50 ms, worst ${jk.maxOf { it[2].toInt() }} ms")</ID>
     <ID>MaxLineLength:Trace.kt$DiagnosticsSummary$add("session: ${clock(span)} · lines ${lines.size}" + (if (dropped &gt; 0) " (oldest $dropped dropped)" else "") + (if (limited &gt; 0) " · $limited lines refused by the rate limit" else ""))</ID>
     <ID>MaxLineLength:Trace.kt$DiagnosticsSummary$add("videos opened: $opened · started: ${starts.size}" + if (starts.isNotEmpty()) " · start-up median ${starts[starts.size / 2]} ms, worst ${starts.last()} ms" else "")</ID>
+    <ID>MaxLineLength:Trace.kt$DiagnosticsSummary$if (empty.isNotEmpty() || emptyStill &gt; 0) add("empty pages: ${maxOf(empty.size, emptyStill)}" + if (empty.isNotEmpty()) ", longest ${empty.max()} ms" else "")</ID>
     <ID>MaxLineLength:Trace.kt$DiagnosticsSummary$val times = lines.mapNotNull { l -&gt; time.find(l)?.groupValues?.let { g -&gt; ((g[1].toLong() * 60 + g[2].toLong()) * 60 + g[3].toLong()) * 1000 + (g[4].toLongOrNull() ?: 0) } }</ID>
     <ID>MaxLineLength:Watch.kt$ChannelFeed$fun</ID>
     <ID>MaxLineLength:Watch.kt$ChannelFeed$private fun unescape(s: String)</ID>
@@ -686,6 +689,7 @@
     <ID>NestedBlockDepth:SponsorBlock.kt$SponsorBlockApi$fun parse(body: String, videoId: String, categories: Set&lt;String&gt;): List&lt;SkipSegment&gt;</ID>
     <ID>NestedBlockDepth:SponsorBlock.kt$UrlConnectionSponsorHttp$override fun get(url: String): Pair&lt;Int, String&gt;</ID>
     <ID>ReturnCount:AddressInput.kt$AddressInput$fun resolve(raw: String, engine: SearchEngine): AddressTarget</ID>
+    <ID>ReturnCount:BarNav.kt$BarNav$fun how(current: String?, target: String): How</ID>
     <ID>ReturnCount:BrowserEngine.kt$BrowserEngine$fun load(id: Long, url: String, bypassFilter: Boolean = false): LoadResult</ID>
     <ID>ReturnCount:BrowserEngine.kt$BrowserEngine$fun visibleRect(id: Long): android.graphics.Rect?</ID>
     <ID>ReturnCount:BrowserEngine.kt$BrowserEngine$private fun tapSkip(id: Long, m: PageMessage.TapSkip)</ID>
@@ -695,6 +699,7 @@
     <ID>ReturnCount:BrowserViewModel.kt$BrowserViewModel$fun minimize()</ID>
     <ID>ReturnCount:BrowserViewModel.kt$BrowserViewModel$override fun onOpenVideo(tabId: Long, url: String)</ID>
     <ID>ReturnCount:BrowserViewModel.kt$BrowserViewModel$override fun onUrlChanged(tabId: Long, url: String)</ID>
+    <ID>ReturnCount:BrowserViewModel.kt$BrowserViewModel$private fun leavePlayerTab(from: Long = activeId): Long?</ID>
     <ID>ReturnCount:CarBrowser.kt$CarBrowser$override fun onSurfaceAvailable(container: SurfaceContainer)</ID>
     <ID>ReturnCount:CarBrowser.kt$CarBrowser$private fun updateNav()</ID>
     <ID>ReturnCount:Community.kt$DislikeRepository$suspend fun dislikes(videoId: String): Long?</ID>

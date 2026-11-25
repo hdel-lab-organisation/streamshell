@@ -418,6 +418,12 @@ class BrowserViewModel @Inject constructor(
                     }
                 }
         }
+        // 0.7.4: YouTube player tabs send channel, search and list links to their instance.
+        viewModelScope.launch {
+            tabs.map { t -> t.tabs.filter { it.playerFor != null }.map { it.id }.toSet() }.distinctUntilChanged().collect { ids ->
+                ids.forEach { engine.setPlayerLinks(it, true) }
+            }
+        }
         // 0.7.3: the mini player cuts the video out by its last measured place (measured every 1.5 s). The swipe down
         // can move the page under it (log 2026-11-22 10:49:24) — half the mini player was black. Measured again at once
         // and while it shrinks.
@@ -687,6 +693,63 @@ class BrowserViewModel @Inject constructor(
         // A blocked or external target leaves the tab exactly as it was.
         if (engine.load(id, url) != BrowserEngine.LoadResult.STARTED) return
         tabs.update { s -> TabsReducer.update(s, id) { it.copy(url = url, showingStart = false, openedFromStart = if (fromStart) true else it.openedFromStart) } }
+    }
+
+    private var lastBar: Pair<String?, Long> = null to 0L
+
+    /**
+     * A section of the site's bottom bar (0.7.4, log 2026-11-25). In a YouTube player tab it goes to the instance tab
+     * (the video to the mini player), so the player tab never becomes a second home. On YouTube the instance changes
+     * inside its loaded page ([BrowserEngine.navigateInPlace]); the same section again scrolls to the top; a second tap
+     * within [com.streamshell.core.browser.BarNav.REPEAT_MS] is ignored.
+     */
+    fun openSiteDestination(d: com.streamshell.core.browser.SiteDestination) {
+        val now = android.os.SystemClock.uptimeMillis()
+        if (com.streamshell.core.browser.BarNav.repeated(lastBar.first, lastBar.second, d.url, now)) {
+            appLog("bar: ${d.id} again within 1.5 s, ignored")
+            return
+        }
+        lastBar = d.url to now
+        val inst = leavePlayerTab()
+        // From the player back to the section the instance already shows: it stays as it was (scroll position too).
+        val shown = inst?.takeIf { id -> tabs.value.tabs.firstOrNull { it.id == id }?.showingStart == false && engine.hasView(id) }
+        if (shown != null && com.streamshell.core.browser.BarNav.how(engine.pages.value[shown]?.url, d.url) == com.streamshell.core.browser.BarNav.How.TOP) {
+            appLog("bar: ${d.id} → tab $inst, shown as it was")
+            return
+        }
+        goTo(inst ?: activeId, d.url, "bar: ${d.id}")
+    }
+
+    /** A player tab asked for a channel, search, list… (0.7.4): shown in its instance, the video in the mini player. */
+    override fun onOpenPage(tabId: Long, url: String) {
+        if (tabs.value.tabs.none { it.id == tabId }) return
+        val inst = leavePlayerTab(tabId)
+        if (inst == null) {
+            engine.load(tabId, url)
+            return
+        }
+        goTo(inst, url, "player link: " + (com.streamshell.core.browser.BarNav.pathOf(url) ?: "page"))
+    }
+
+    /**
+     * When [from] (default: the current tab) is a YouTube player tab with its instance: its video (if any) goes to the
+     * mini player and the instance is selected. Returns the instance's id, or null when [from] is no player tab.
+     */
+    private fun leavePlayerTab(from: Long = activeId): Long? {
+        val s = tabs.value
+        val tab = s.tabs.firstOrNull { it.id == from } ?: return null
+        val inst = tab.playerFor?.takeIf { id -> s.tabs.any { it.id == id } } ?: return null
+        val playing = com.streamshell.core.sponsor.SponsorBlockApi.videoIdOf(engine.pages.value[from]?.url ?: tab.url) != null
+        if (playing && miniTab.value == null) miniTab.value = from
+        tabs.update { TabsReducer.select(it, inst) }
+        nav.value = NavState()
+        return inst // loaded by goTo
+    }
+
+    private fun goTo(id: Long, url: String, what: String) {
+        val fromStart = tabs.value.tabs.firstOrNull { it.id == id }?.let { it.showingStart || it.url == null } ?: false
+        tabs.update { s -> TabsReducer.update(s, id) { it.copy(url = url, showingStart = false, openedFromStart = if (fromStart) true else it.openedFromStart) } }
+        engine.navigateInPlace(id, url) { how -> appLog("$what → tab $id, $how") }
     }
 
     fun openInNewTab(url: String) {
